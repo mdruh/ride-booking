@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fastable Ride Booking</title>
+
+<!-- Leaflet CSS & JS for Interactive Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f3f5f7;
+    color: #111;
+}
+
+.app {
+    max-width: 520px;
+    margin: auto;
+    min-height: 100vh;
+}
+
+.header {
+    background: #111;
+    color: white;
+    padding: 20px;
+}
+
+.logo {
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    margin-top: 5px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+.card {
+    background: white;
+    margin: 15px;
+    padding: 18px;
+    border-radius: 18px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+}
+
+h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.description {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+/* MAP STYLING */
+.map-container {
+    width: 100%;
+    height: 280px;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    background: #ddd;
+    z-index: 1;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* BUTTONS & INPUTS */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.location-button {
+    flex: 1;
+    border: none;
+    padding: 13px;
+    border-radius: 12px;
+    background: #f0f1f2;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+}
+
+.location-button.active {
+    background: #111;
+    color: white;
+}
+
+.location-box {
+    border: 1px solid #ddd;
+    background: #fafafa;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.location-title {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #777;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.location-value {
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.map-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: #008f72;
+    font-size: 13px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+/* FARE SUMMARY BOX */
+.fare-box {
+    border: 2px solid #008f72;
+    background: #e6f7f3;
+    padding: 14px;
+    border-radius: 12px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.fare-title {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    color: #008f72;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.fare-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #111;
+}
+
+label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin: 10px 0 6px;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 11px;
+    font-size: 16px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #111;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.small-button {
+    border: none;
+    background: #111;
+    color: white;
+    padding: 14px;
+    border-radius: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.send-button {
+    width: 100%;
+    border: none;
+    background: #25D366;
+    color: white;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 18px;
+}
+
+.send-button:hover {
+    background: #20bd5a;
+}
+
+.status {
+    text-align: center;
+    font-size: 13px;
+    min-height: 20px;
+    margin-top: 10px;
+}
+
+.footer-text {
+    text-align: center;
+    color: #888;
+    font-size: 11px;
+    line-height: 1.5;
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <header class="header">
+        <div class="logo">FASTABLE</div>
+        <div class="subtitle">Fast & easy ride booking</div>
+    </header>
+
+    <div class="card">
+        <h1>Book Your Ride</h1>
+        <p class="description">Tap a button below, then tap on the map to place a pin.</p>
+
+        <!-- INTERACTIVE MAP -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- MANUAL PIN SELECTION BUTTONS -->
+        <div class="action-buttons">
+            <button class="location-button" id="pinPickupBtn">📍 Pin Pickup on Map</button>
+            <button class="location-button" id="pinDestBtn">🏁 Pin Destination on Map</button>
+        </div>
+
+        <button class="location-button" id="pickupButton" style="margin-bottom: 15px; width: 100%;">
+            ⚡ Use My GPS Location
+        </button>
+
+        <!-- PICKUP SECTION -->
+        <div class="location-box">
+            <span class="location-title">Pickup Location</span>
+            <div class="location-value" id="pickupText">Not selected</div>
+            <a id="pickupMapLink" class="map-link" href="#" target="_blank" style="display:none;">Open Pickup in Google Maps</a>
+        </div>
+
+        <!-- DESTINATION SECTION -->
+        <label>Destination Search</label>
+        <div class="input-group">
+            <input type="text" id="destinationInput" placeholder="Type destination name or search address">
+            <button class="small-button" id="searchDestinationButton">Search</button>
+        </div>
+
+        <div class="location-box" style="margin-top: 10px;">
+            <span class="location-title">Destination</span>
+            <div class="location-value" id="destinationText">Not selected</div>
+            <a id="destinationMapLink" class="map-link" href="#" target="_blank" style="display:none;">Open Destination in Google Maps</a>
+        </div>
+
+        <!-- FARE & DISTANCE ROW -->
+        <div class="fare-box" id="fareBox">
+            <span class="fare-title">Your Fare</span>
+            <div class="fare-value" id="fareText">0 Kilometre | Total Fare 0 Riyal</div>
+        </div>
+
+        <!-- CUSTOMER DETAILS -->
+        <label>Customer Name</label>
+        <input type="text" id="customerName" placeholder="Enter your name">
+
+        <label>Phone Number</label>
+        <input type="tel" id="customerPhone" placeholder="+966 5XXXXXXXX">
+
+        <!-- SUBMIT -->
+        <button class="send-button" id="sendButton">💬 Send Booking to WhatsApp</button>
+        <div class="status" id="status"></div>
+
+        <div class="footer-text">
+            Your booking will be sent directly to Fastable WhatsApp.
+        </div>
+    </div>
+</div>
+
+<script>
+const WHATSAPP_NUMBER = "966530725809";
+const FARE_PER_KM = 1; // 1 Riyal per Kilometre
+
+// DOM Elements
+const pinPickupBtn = document.getElementById("pinPickupBtn");
+const pinDestBtn = document.getElementById("pinDestBtn");
+const pickupButton = document.getElementById("pickupButton");
+const pickupText = document.getElementById("pickupText");
+const pickupMapLink = document.getElementById("pickupMapLink");
+const destinationInput = document.getElementById("destinationInput");
+const searchDestinationButton = document.getElementById("searchDestinationButton");
+const destinationText = document.getElementById("destinationText");
+const destinationMapLink = document.getElementById("destinationMapLink");
+const fareBox = document.getElementById("fareBox");
+const fareText = document.getElementById("fareText");
+const customerName = document.getElementById("customerName");
+const customerPhone = document.getElementById("customerPhone");
+const sendButton = document.getElementById("sendButton");
+const status = document.getElementById("status");
+
+let pickupLocation = null;
+let destinationLocation = null;
+let calculatedDistanceKm = 0;
+let calculatedTotalFare = 0;
+let activePinMode = null; // 'pickup' or 'destination'
+
+// Initialize Interactive Leaflet Map centered on Jeddah
+const map = L.map('map').setView([21.543333, 39.172778], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+let pickupMarker = null;
+let destinationMarker = null;
+
+function showStatus(message, success = false) {
+    status.innerText = message;
+    status.style.color = success ? "#008f72" : "#d63031";
+}
+
+// CALCULATE DISTANCE AND FARE
+function calculateFare() {
+    if (pickupLocation && destinationLocation) {
+        const pickupLatLng = L.latLng(pickupLocation.latitude, pickupLocation.longitude);
+        const destLatLng = L.latLng(destinationLocation.lat, destinationLocation.lng);
+
+        // Distance in meters converted to rounded kilometers
+        const distanceMeters = pickupLatLng.distanceTo(destLatLng);
+        calculatedDistanceKm = Math.round(distanceMeters / 1000);
+        
+        // Minimum 1 KM calculation safety
+        if (calculatedDistanceKm < 1) calculatedDistanceKm = 1.30;
+
+        calculatedTotalFare = calculatedDistanceKm * FARE_PER_KM;
+
+        fareText.innerText = `${calculatedDistanceKm} Kilometre Total Fare ${calculatedTotalFare} Riyal`;
+        fareBox.style.display = "block";
+    }
+}
+
+// TOGGLE MANUAL PIN MODES
+pinPickupBtn.addEventListener("click", () => {
+    activePinMode = "pickup";
+    pinPickupBtn.classList.add("active");
+    pinDestBtn.classList.remove("active");
+    showStatus("Tap anywhere on the map to set your Pickup Pin.", true);
+});
+
+pinDestBtn.addEventListener("click", () => {
+    activePinMode = "destination";
+    pinDestBtn.classList.add("active");
+    pinPickupBtn.classList.remove("active");
+    showStatus("Tap anywhere on the map to set your Destination Pin.", true);
+});
+
+// MAP CLICK HANDLER FOR MANUAL PINNING
+map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+
+    if (activePinMode === "pickup") {
+        setPickupCoords(lat, lng, "Selected from Map Pin");
+    } else if (activePinMode === "destination") {
+        setDestinationCoords(lat, lng, `Pin Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+    } else {
+        showStatus("Please tap 'Pin Pickup' or 'Pin Destination' first.");
+    }
+});
+
+// SET PICKUP LOCATION
+function setPickupCoords(lat, lng, labelText) {
+    pickupLocation = { latitude: lat, longitude: lng };
+    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    
+    pickupText.innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)} (${labelText})`;
+    pickupMapLink.href = mapsLink;
+    pickupMapLink.style.display = "inline-block";
+
+    if (pickupMarker) map.removeLayer(pickupMarker);
+    pickupMarker = L.marker([lat, lng]).addTo(map).bindPopup("Pickup Location").openPopup();
+    
+    calculateFare();
+    showStatus("Pickup location set!", true);
+}
+
+// SET DESTINATION LOCATION
+function setDestinationCoords(lat, lng, addressName) {
+    destinationLocation = { name: addressName, lat: lat, lng: lng };
+    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    destinationText.innerText = addressName;
+    destinationMapLink.href = mapsLink;
+    destinationMapLink.style.display = "inline-block";
+
+    if (destinationMarker) map.removeLayer(destinationMarker);
+    destinationMarker = L.marker([lat, lng]).addTo(map).bindPopup("Destination Location").openPopup();
+
+    calculateFare();
+    showStatus("Destination set!", true);
+}
+
+// GPS PICKUP LOCATION
+pickupButton.addEventListener("click", () => {
+    showStatus("Fetching GPS location...", true);
+    if (!navigator.geolocation) {
+        showStatus("GPS is not supported on this browser/device.");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => setPickupCoords(pos.coords.latitude, pos.coords.longitude, "GPS Current Location"),
+        (err) => showStatus("GPS permission blocked. Tap 'Pin Pickup on Map' instead."),
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+});
+
+// DESTINATION SEARCH API
+searchDestinationButton.addEventListener("click", () => {
+    const query = destinationInput.value.trim();
+    if (!query) {
+        showStatus("Please enter a destination to search.");
+        return;
+    }
+
+    showStatus("Searching for location...", true);
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.length === 0) {
+                showStatus("Destination not found. Try tapping 'Pin Destination on Map' instead.");
+                return;
+            }
+            const place = data[0];
+            const lat = parseFloat(place.lat);
+            const lng = parseFloat(place.lon);
+
+            setDestinationCoords(lat, lng, place.display_name);
+            map.setView([lat, lng], 14);
+        })
+        .catch(() => showStatus("Search failed. Check your internet connection."));
+});
+
+destinationInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        searchDestinationButton.click();
+    }
+});
+
+// WHATSAPP SUBMIT
+sendButton.addEventListener("click", () => {
+    const name = customerName.value.trim();
+    const phone = customerPhone.value.trim();
+
+    if (!pickupLocation) return showStatus("Please set your Pickup location.");
+    if (!destinationLocation) return showStatus("Please set your Destination.");
+    if (!name) return showStatus("Please enter your name.");
+    if (!phone) return showStatus("Please enter your phone number.");
+
+    const pickupGLink = `https://www.google.com/maps/search/?api=1&query=${pickupLocation.latitude},${pickupLocation.longitude}`;
+    const destGLink = `https://www.google.com/maps/search/?api=1&query=${destinationLocation.lat},${destinationLocation.lng}`;
+
+    const message = 
+`🚗 FASTABLE NEW RIDE BOOKING
+
+👤 CUSTOMER INFORMATION
+Name: ${name}
+Phone: ${phone}
+
+📍 PICKUP LOCATION
+Coords: ${pickupLocation.latitude}, ${pickupLocation.longitude}
+Google Maps: ${pickupGLink}
+
+🏁 DESTINATION
+Location: ${destinationLocation.name}
+Google Maps: ${destGLink}
+
+💰 FARE DETAILS
+Distance: ${calculatedDistanceKm} Kilometre
+Total Fare: ${calculatedTotalFare} Riyal
+
+━━━━━━━━━━━━━━━━━━
+FASTABLE RIDE BOOKING`;
+
+    window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+});
+</script>
+</body>
+</html>
