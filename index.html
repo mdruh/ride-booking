@@ -316,7 +316,7 @@ input:focus {
 
 <script>
 const WHATSAPP_NUMBER = "966530725809";
-const FARE_PER_KM = 1; // 1 Riyal per Kilometre
+const FARE_PER_KM = 3.50; // 1 Riyal per Kilometre
 
 // DOM Elements
 const pinPickupBtn = document.getElementById("pinPickupBtn");
@@ -371,7 +371,7 @@ function calculateFare() {
 
         calculatedTotalFare = calculatedDistanceKm * FARE_PER_KM;
 
-        fareText.innerText = `${calculatedDistanceKm} Kilometre Total Fare ${calculatedTotalFare} Riyal`;
+        fareText.innerText = `${calculatedDistanceKm} Kilometre Total Fare ${calculatedTotalFare} BDT`;
         fareBox.style.display = "block";
     }
 }
