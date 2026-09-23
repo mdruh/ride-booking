@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P Video, Audio & Chat System</title>
-    <!-- Include PeerJS Library for serverless WebRTC connection -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -49,6 +48,8 @@
         }
         video {
             width: 100%;
+            height: 180px;
+            object-fit: cover;
             background: #000;
             border-radius: 8px;
             transform: scaleX(-1);
@@ -61,10 +62,10 @@
             font-size: 14px;
         }
         input { background: #334155; color: white; width: calc(100% - 22px); }
-        button { background: var(--primary); color: white; cursor: pointer; font-weight: bold; }
+        button { background: var(--primary); color: white; cursor: pointer; font-weight: bold; width: 100%; }
         button:hover { opacity: 0.9; }
         .chat-box {
-            height: 250px;
+            height: 220px;
             background: #0f172a;
             border-radius: 8px;
             overflow-y: scroll;
@@ -74,16 +75,15 @@
             flex-direction: column;
             gap: 5px;
         }
-        .msg { padding: 6px 10px; border-radius: 6px; max-width: 80%; font-size: 13px; }
+        .msg { padding: 6px 10px; border-radius: 6px; max-width: 80%; font-size: 13px; word-break: break-word;}
         .msg.sent { background: #4f46e5; align-self: flex-end; }
         .msg.received { background: #334155; align-self: flex-start; }
-        .status { font-size: 12px; color: #38bdf8; margin-bottom: 10px; }
+        .status { font-size: 12px; color: #38bdf8; margin-bottom: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h2>WebRTC P2P Call & Chat Room, Created by Hridoy</h2>
-  
+    <h2>WebRTC P2P Call & Chat Room, তৈরি হয়েছে হৃদয় এর মাধ্যমে,</h2>
     <div class="status" id="connection-status">Initializing connection system...</div>
 
     <div class="container">
@@ -101,7 +101,7 @@
                 </div>
             </div>
             
-            <p>Your ID: <b id="my-id">Generating...</b></p>
+            <p>Your ID: <b id="my-id" style="user-select: all;">Generating...</b></p>
             <input type="text" id="target-id-input" placeholder="Enter Partner ID to Call">
             <button onclick="startCall(true)">Video Call</button>
             <button onclick="startCall(false)" style="background: #0ea5e9;">Audio-Only Call</button>
@@ -113,7 +113,7 @@
             <h3>Direct Chat</h3>
             <div class="chat-box" id="chat-messages"></div>
             <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()" style="width: 100%;">Send Message</button>
+            <button onclick="sendMessage()">Send Message</button>
         </div>
     </div>
 
@@ -123,33 +123,41 @@
     let currentCall;
     let dataConnection;
 
-    // Initialize PeerJS (Connects to free cloud broker registry)
     function initPeer() {
         peer = new Peer();
 
         peer.on('open', (id) => {
             document.getElementById('my-id').innerText = id;
-            document.getElementById('connection-status').innerText = 'Connected to network. Ready to call or chat!';
+            document.getElementById('connection-status').innerText = 'Connected to network. Ready!';
         });
 
-        // Handle incoming calls
+        // Handle incoming calls correctly by preparing stream first
         peer.on('call', async (call) => {
             const acceptCall = confirm("Incoming call! Do you want to accept?");
             if (!acceptCall) return;
             
-            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('localVideo').srcObject = myStream;
-            
-            call.answer(myStream);
-            currentCall = call;
-            
-            call.on('stream', (remoteStream) => {
-                document.getElementById('remoteVideo').srcObject = remoteStream;
-                document.getElementById('connection-status').innerText = 'Connected in a live call.';
-            });
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = myStream;
+                
+                // Answer call passing local stream back
+                call.answer(myStream);
+                currentCall = call;
+
+                call.on('stream', (remoteStream) => {
+                    const remoteVideo = document.getElementById('remoteVideo');
+                    remoteVideo.srcObject = remoteStream;
+                    remoteVideo.play().catch(e => console.log("Playback error:", e));
+                    document.getElementById('connection-status').innerText = 'Connected in a live call.';
+                });
+
+                call.on('close', () => endCall());
+            } catch (err) {
+                alert("Could not access camera/mic for answering.");
+                console.error(err);
+            }
         });
 
-        // Handle incoming data connections (Text chat)
         peer.on('connection', (conn) => {
             dataConnection = conn;
             setupDataConnectionHandlers();
@@ -157,25 +165,26 @@
         });
     }
 
-    // Setup local media and start an outgoing call
     async function startCall(isVideo) {
         const targetId = document.getElementById('target-id-input').value.trim();
-        if (!targetId) return alert("Please enter a target partner ID first!");
+        if (!targetId) return alert("Please enter a partner ID first!");
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             document.getElementById('localVideo').srcObject = myStream;
 
-            // Initiate Data Connection for Chat simultaneously
+            // Connect text chat channel
             dataConnection = peer.connect(targetId);
             setupDataConnectionHandlers();
 
-            // Initiate Media Call
+            // Initiate video/audio call
             const call = peer.call(targetId, myStream);
             currentCall = call;
 
             call.on('stream', (remoteStream) => {
-                document.getElementById('remoteVideo').srcObject = remoteStream;
+                const remoteVideo = document.getElementById('remoteVideo');
+                remoteVideo.srcObject = remoteStream;
+                remoteVideo.play().catch(e => console.log("Playback error:", e));
                 document.getElementById('connection-status').innerText = 'Connected in a live call.';
             });
 
@@ -202,7 +211,7 @@
             appendMessage(msg, 'sent');
             input.value = '';
         } else {
-            alert("Chat connection not active. Establish a connection first.");
+            alert("Chat connection not active. Connect via call or connection first.");
         }
     }
 
@@ -229,8 +238,6 @@
         document.getElementById('connection-status').innerText = 'Call ended.';
     }
 
-    // Run on startup
     initPeer();
 </script>
-</body>
-</html>
+</body></html>
