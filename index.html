@@ -83,7 +83,7 @@
 </head>
 <body>
 
-    <h2>WebRTC P2P Call & Chat Room</h2>
+    <h2>খালি ঘরে ইউজার নেইম দিয়ে সেটা আপনার বন্ধুকে পাঠান,</h2>
     <div class="status" id="connection-status">Initializing connection system...</div>
 
     <div class="container">
@@ -101,8 +101,8 @@
                 </div>
             </div>
             
-            <p>Your ID: <b id="my-id" style="user-select: all;">Generating...</b></p>
-            <input type="text" id="target-id-input" placeholder="Enter Partner ID to Call">
+            <p>Your ID: <b id="my-id" style="user-select: all;">Setting up...</b></p>
+            <input type="text" id="target-id-input" placeholder="Enter Partner's 8-Digit ID">
             <button onclick="startCall(true)">Video Call</button>
             <button onclick="startCall(false)" style="background: #0ea5e9;">Audio-Only Call</button>
             <button onclick="endCall()" style="background: #ef4444;">End Call</button>
@@ -125,36 +125,46 @@
     let ringInterval = null;
     let audioCtx = null;
 
-    // Initialize Web Audio API ringtone generator
+    // Prompt user for an 8-digit ID on startup
+    function getCustomId() {
+        let customId = "";
+        while (true) {
+            customId = prompt("Enter your custom 8-digit ID/Username:", Math.floor(10000000 + Math.random() * 90000000));
+            if (customId === null) {
+                // User clicked cancel, generate random 8-digit fallback
+                customId = Math.floor(10000000 + Math.random() * 90000000).toString();
+                break;
+            }
+            customId = customId.trim();
+            if (/^\d{8}$/.test(customId)) {
+                break; // Valid 8-digit number
+            }
+            alert("Invalid format! Please enter exactly an 8-digit number (e.g., 12345678).");
+        }
+        return customId;
+    }
+
     function startRingingTone() {
         if (ringInterval) return;
-        
         try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
             function playBeep() {
                 if (!audioCtx) return;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                
-                // Standard telephone dual-tones (approx 440Hz and 480Hz combined effect)
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
-                
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                
                 osc.start();
                 osc.stop(audioCtx.currentTime + 1.5);
             }
-
             playBeep();
-            ringInterval = setInterval(playBeep, 3000); // Repeat every 3 seconds
+            ringInterval = setInterval(playBeep, 3000);
         } catch (e) {
-            console.log("Audio context prevented or failed:", e);
+            console.log("Audio context error:", e);
         }
     }
 
@@ -170,11 +180,23 @@
     }
 
     function initPeer() {
-        peer = new Peer();
+        // Get custom 8-digit ID right away
+        const customId = getCustomId();
+
+        // Pass custom ID into PeerJS connection
+        peer = new Peer(customId);
 
         peer.on('open', (id) => {
             document.getElementById('my-id').innerText = id;
-            document.getElementById('connection-status').innerText = 'Connected to network. Ready!';
+            document.getElementById('connection-status').innerText = 'Connected! Share your 8-digit ID to receive calls.';
+        });
+
+        peer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                alert("That 8-digit ID is already taken by someone else online. Please refresh and choose another.");
+            } else {
+                console.error(err);
+            }
         });
 
         peer.on('call', async (call) => {
@@ -211,13 +233,12 @@
 
     async function startCall(isVideo) {
         const targetId = document.getElementById('target-id-input').value.trim();
-        if (!targetId) return alert("Please enter a partner ID first!");
+        if (!targetId) return alert("Please enter your partner's 8-digit ID first!");
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             document.getElementById('localVideo').srcObject = myStream;
 
-            // Start calling ringing tone while waiting for pickup
             startRingingTone();
             document.getElementById('connection-status').innerText = 'Calling partner...';
 
@@ -228,7 +249,7 @@
             currentCall = call;
 
             call.on('stream', (remoteStream) => {
-                stopRingingTone(); // Stop tone when connected
+                stopRingingTone();
                 const remoteVideo = document.getElementById('remoteVideo');
                 remoteVideo.srcObject = remoteStream;
                 remoteVideo.play().catch(e => console.log("Playback error:", e));
