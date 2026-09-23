@@ -83,7 +83,7 @@
 </head>
 <body>
 
-    <h2>WebRTC P2P Call & Chat Room, তৈরি হয়েছে হৃদয় এর মাধ্যমে,</h2>
+    <h2>WebRTC P2P Call & Chat Room</h2>
     <div class="status" id="connection-status">Initializing connection system...</div>
 
     <div class="container">
@@ -122,6 +122,52 @@
     let myStream;
     let currentCall;
     let dataConnection;
+    let ringInterval = null;
+    let audioCtx = null;
+
+    // Initialize Web Audio API ringtone generator
+    function startRingingTone() {
+        if (ringInterval) return;
+        
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            function playBeep() {
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                // Standard telephone dual-tones (approx 440Hz and 480Hz combined effect)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            }
+
+            playBeep();
+            ringInterval = setInterval(playBeep, 3000); // Repeat every 3 seconds
+        } catch (e) {
+            console.log("Audio context prevented or failed:", e);
+        }
+    }
+
+    function stopRingingTone() {
+        if (ringInterval) {
+            clearInterval(ringInterval);
+            ringInterval = null;
+        }
+        if (audioCtx) {
+            audioCtx.close().catch(() => {});
+            audioCtx = null;
+        }
+    }
 
     function initPeer() {
         peer = new Peer();
@@ -131,7 +177,6 @@
             document.getElementById('connection-status').innerText = 'Connected to network. Ready!';
         });
 
-        // Handle incoming calls correctly by preparing stream first
         peer.on('call', async (call) => {
             const acceptCall = confirm("Incoming call! Do you want to accept?");
             if (!acceptCall) return;
@@ -140,7 +185,6 @@
                 myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('localVideo').srcObject = myStream;
                 
-                // Answer call passing local stream back
                 call.answer(myStream);
                 currentCall = call;
 
@@ -173,15 +217,18 @@
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             document.getElementById('localVideo').srcObject = myStream;
 
-            // Connect text chat channel
+            // Start calling ringing tone while waiting for pickup
+            startRingingTone();
+            document.getElementById('connection-status').innerText = 'Calling partner...';
+
             dataConnection = peer.connect(targetId);
             setupDataConnectionHandlers();
 
-            // Initiate video/audio call
             const call = peer.call(targetId, myStream);
             currentCall = call;
 
             call.on('stream', (remoteStream) => {
+                stopRingingTone(); // Stop tone when connected
                 const remoteVideo = document.getElementById('remoteVideo');
                 remoteVideo.srcObject = remoteStream;
                 remoteVideo.play().catch(e => console.log("Playback error:", e));
@@ -190,6 +237,7 @@
 
             call.on('close', () => endCall());
         } catch (err) {
+            stopRingingTone();
             alert("Error accessing camera/microphone. Check permissions.");
             console.error(err);
         }
@@ -229,6 +277,7 @@
     }
 
     function endCall() {
+        stopRingingTone();
         if (currentCall) currentCall.close();
         if (myStream) {
             myStream.getTracks().forEach(track => track.stop());
@@ -240,4 +289,5 @@
 
     initPeer();
 </script>
-</body></html>
+</body>
+</html>
