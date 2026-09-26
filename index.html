@@ -33,9 +33,10 @@
             max-width: 500px;
             display: flex;
             justify-content: flex-end;
+            gap: 10px;
             margin-bottom: 5px;
         }
-        .top-bar select {
+        .top-bar select, .top-bar button {
             width: auto;
             padding: 5px 10px;
             background: #334155;
@@ -44,6 +45,12 @@
             border: none;
             cursor: pointer;
             font-family: inherit;
+            margin: 0;
+            font-size: 13px;
+        }
+        .top-bar button.logout-btn {
+            background: #ef4444;
+            display: none; /* Hidden on login screen */
         }
         .card {
             background: var(--panel);
@@ -109,8 +116,9 @@
 </head>
 <body>
 
-    <!-- Language Selector Dropdown at top -->
+    <!-- Language Selector & Logout Controls at top -->
     <div class="top-bar">
+        <button id="logout-btn" class="logout-btn" onclick="logoutUser()" data-i18n="btn_logout_action">Logout</button>
         <select id="language-select" onchange="changeLanguage(this.value)">
             <option value="en" selected>English</option>
             <option value="bn">বাংলা (Bangla)</option>
@@ -119,7 +127,7 @@
 
     <!-- LOGIN & REGISTRATION SCREEN -->
     <div class="card" id="auth-screen">
-        <h2 data-i18n="auth_title">Welcome to Dino(দীনু) Call System</h2>
+        <h2 data-i18n="auth_title">Welcome to Dino Call System</h2>
         <p style="font-size: 13px; color: #94a3b8;" data-i18n="auth_desc">Login or register with your Country Code & Phone Number</p>
         
         <label data-i18n="label_name">Your Name</label>
@@ -128,14 +136,14 @@
         <label data-i18n="label_id">Country Code & Phone Number ID</label>
         <div class="row">
             <select id="reg-country">
-                <option value="+880" selected>Bangladesh (+880)</option>
+                <option value="+880">Bangladesh (+880)</option>
                 <option value="+1">America (+1)</option>
-                <option value="+966">Saudi Arabia (+966)</option>
+                <option value="+966" selected>Saudi Arabia (+966)</option>
                 <option value="+60">Malaysia (+60)</option>
                 <option value="+971">Dubai / UAE (+971)</option>
                 <option value="+960">Maldives (+960)</option>
             </select>
-            <input type="tel" id="reg-phone" placeholder="Phone number (e.g. 1712345678)" data-i18n-placeholder="ph_phone">
+            <input type="tel" id="reg-phone" placeholder="Phone number (e.g. 530725809)" data-i18n-placeholder="ph_phone">
         </div>
         <button onclick="loginOrRegister()" style="margin-top: 15px;" data-i18n="btn_login">Login / Register Profile</button>
     </div>
@@ -166,7 +174,7 @@
                         <video id="remoteVideo" autoplay playsinline></video>
                     </div>
                 </div>
-                <input type="text" id="target-id-input" placeholder="Partner's Phone ID (e.g. +8801712345678)" data-i18n-placeholder="ph_partner_id">
+                <input type="text" id="target-id-input" placeholder="Partner's Phone ID (e.g. +966530725809)" data-i18n-placeholder="ph_partner_id">
                 <div class="row">
                     <button onclick="startCall(true)" data-i18n="btn_video_call">Video Call</button>
                     <button onclick="startCall(false)" style="background: #0ea5e9;" data-i18n="btn_audio_call">Audio Call</button>
@@ -188,7 +196,7 @@
 
                 <!-- Input to add IDs iteratively -->
                 <div class="row">
-                    <input type="text" id="group-member-input" placeholder="Enter ID (+880...)" data-i18n-placeholder="ph_group_input">
+                    <input type="text" id="group-member-input" placeholder="Enter ID (+966...)" data-i18n-placeholder="ph_group_input">
                     <button onclick="addGroupMember()" style="width: 35%; background: #0ea5e9;" data-i18n="btn_add">+ Add</button>
                 </div>
 
@@ -217,7 +225,7 @@
         <div class="card" style="max-width: none;">
             <h3 data-i18n="chat_section_title">Friends & Chat</h3>
             <div style="margin-bottom: 15px;">
-                <input type="text" id="add-friend-input" placeholder="Friend's Full Number ID (+880...)" data-i18n-placeholder="ph_friend_input">
+                <input type="text" id="add-friend-input" placeholder="Friend's Full Number ID (+966...)" data-i18n-placeholder="ph_friend_input">
                 <button onclick="addFriend()" data-i18n="btn_add_friend">Add Friend</button>
             </div>
             
@@ -240,15 +248,16 @@
             label_name: "Your Name",
             ph_name: "Enter your name",
             label_id: "Country Code & Phone Number ID",
-            ph_phone: "Phone number (e.g. 1712345678)",
+            ph_phone: "Phone number (e.g. 530725809)",
             btn_login: "Login / Register Profile",
+            btn_logout_action: "Logout",
             
             room_title: "Live Call Room",
             btn_single_tab: "1-on-1 Call",
             btn_group_tab: "Group Call Room",
             lbl_my_video: "My Video",
             lbl_partner_video: "Partner Video",
-            ph_partner_id: "Partner's Phone ID (e.g. +8801712345678)",
+            ph_partner_id: "Partner's Phone ID (e.g. +966530725809)",
             btn_video_call: "Video Call",
             btn_audio_call: "Audio Call",
             btn_end_call: "End Call",
@@ -259,7 +268,7 @@
             cap_6: "Up to 6 People",
             cap_8: "Up to 8 People",
             cap_10: "Up to 10 People",
-            ph_group_input: "Enter ID (+880...)",
+            ph_group_input: "Enter ID (+966...)",
             btn_add: "+ Add",
             group_added_label: "Added Members to Call:",
             lbl_me: "Me",
@@ -267,7 +276,7 @@
             btn_leave_group: "Leave Group",
             
             chat_section_title: "Friends & Chat",
-            ph_friend_input: "Friend's Full Number ID (+880...)",
+            ph_friend_input: "Friend's Full Number ID (+966...)",
             btn_add_friend: "Add Friend",
             friends_list_title: "My Friends List",
             direct_chat_title: "Direct Chat",
@@ -305,15 +314,16 @@
             label_name: "আপনার নাম",
             ph_name: "আপনার নাম লিখুন",
             label_id: "দেশ এবং ফোন নম্বর আইডি",
-            ph_phone: "ফোন নম্বর (যেমন: 1712345678)",
+            ph_phone: "ফোন নম্বর (যেমন: 530725809)",
             btn_login: "লগইন / প্রফাইল তৈরি করুন",
+            btn_logout_action: "লগআউট",
             
             room_title: "লাইভ কল রুম",
             btn_single_tab: "১-অন-১ কল",
             btn_group_tab: "গ্রুপ কল রুম",
             lbl_my_video: "আমার ভিডিও",
             lbl_partner_video: "সঙ্গীর ভিডিও",
-            ph_partner_id: "সঙ্গীর ফোন আইডি (যেমন: +8801712345678)",
+            ph_partner_id: "সঙ্গীর ফোন আইডি (যেমন: +966530725809)",
             btn_video_call: "ভিডিও কল",
             btn_audio_call: "অডিও কল",
             btn_end_call: "কল শেষ করুন",
@@ -324,7 +334,7 @@
             cap_6: "সর্বোচ্চ ৬ জন",
             cap_8: "সর্বোচ্চ ৮ জন",
             cap_10: "সর্বোচ্চ ১০ জন",
-            ph_group_input: "আইডি লিখুন (+880...)",
+            ph_group_input: "আইডি লিখুন (+966...)",
             btn_add: "+ যোগ করুন",
             group_added_label: "কলের জন্য যোগ করা সদস্যগণ:",
             lbl_me: "আমি",
@@ -332,7 +342,7 @@
             btn_leave_group: "গ্রুপ ত্যাগ করুন",
             
             chat_section_title: "বন্ধু এবং চ্যাট",
-            ph_friend_input: "বন্ধুর সম্পূর্ণ ফোন আইডি (+880...)",
+            ph_friend_input: "বন্ধুর সম্পূর্ণ ফোন আইডি (+966...)",
             btn_add_friend: "বন্ধু যোগ করুন",
             friends_list_title: "আমার বন্ধুর তালিকা",
             direct_chat_title: "সরাসরি চ্যাট",
@@ -371,7 +381,6 @@
     function changeLanguage(lang) {
         currentLang = lang;
         
-        // Update all elements with data-i18n attribute
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (translations[currentLang][key]) {
@@ -379,7 +388,6 @@
             }
         });
 
-        // Update all placeholder attributes with data-i18n-placeholder attribute
         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.getAttribute('data-i18n-placeholder');
             if (translations[currentLang][key]) {
@@ -387,13 +395,13 @@
             }
         });
 
-        // Re-render chips or friends lists to adapt language strings immediately
         renderGroupChips();
         loadFriendsUI();
     }
 
-    // TODO: Replace this configuration with your own free Firebase project keys
-    const firebaseConfig = {
+    // TODO: Replace this configuration with your own Firebase project keys
+    
+const firebaseConfig = {
     apiKey: "AIzaSyAODsM04fG95nIniGu1uhXzNukEnNL_OMM",
     authDomain: "rwein-store.firebaseapp.com",
     databaseURL: "https://rwein-store-default-rtdb.firebaseio.com",
@@ -411,10 +419,22 @@
     let currentUser = null;
     let peer, myStream, currentCall, dataConnection;
     let ringInterval = null, audioCtx = null;
-    
-    // Group call variables
     let groupMembersList = [];
     let groupCalls = [];
+
+    // --- CHECK LOCALSTORAGE ON PAGE LOAD ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedUserJson = localStorage.getItem('p2p_current_user');
+        if (savedUserJson) {
+            try {
+                currentUser = JSON.parse(savedUserJson);
+                startAppSession();
+            } catch (e) {
+                console.error("Failed to parse saved session", e);
+                localStorage.removeItem('p2p_current_user');
+            }
+        }
+    });
 
     // --- RINGTONE SYSTEM ---
     function startRingingTone() {
@@ -483,12 +503,32 @@
             await userDocRef.set(currentUser);
         }
 
+        // Save session locally
+        localStorage.setItem('p2p_current_user', JSON.stringify(currentUser));
+        startAppSession();
+    }
+
+    function startAppSession() {
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'grid';
+        document.getElementById('logout-btn').style.display = 'block';
         document.getElementById('display-my-id').innerText = currentUser.userId;
 
         initPeerSystem(currentUser.userId);
         loadFriendsUI();
+    }
+
+    function logoutUser() {
+        // Clear local storage and reset session data
+        localStorage.removeItem('p2p_current_user');
+        if (peer) peer.destroy();
+        endCall();
+
+        currentUser = null;
+        document.getElementById('app-screen').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'block';
+        document.getElementById('connection-status').innerText = '';
     }
 
     function initPeerSystem(userId) {
@@ -737,6 +777,9 @@
             friends: currentUser.friends
         });
 
+        // Update local session storage as well
+        localStorage.setItem('p2p_current_user', JSON.stringify(currentUser));
+
         document.getElementById('add-friend-input').value = '';
         loadFriendsUI();
         alert(translations[currentLang].friend_success);
@@ -746,7 +789,7 @@
         const listDiv = document.getElementById('friends-list');
         listDiv.innerHTML = '';
 
-        if (currentUser.friends.length === 0) {
+        if (!currentUser || currentUser.friends.length === 0) {
             listDiv.innerHTML = `<p style="font-size:12px; color:#94a3b8;">${translations[currentLang].no_friends}</p>`;
             return;
         }
