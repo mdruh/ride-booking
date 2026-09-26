@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Video, Audio & Chat System</title>
+    <title>P2P Call & Chat System</title>
+    <!-- PeerJS for Calling -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- Google Fonts for Bangla Support (Hind Siliguri) -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #4f46e5;
@@ -13,7 +19,7 @@
             --text: #f8fafc;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Hind Siliguri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
@@ -22,128 +28,395 @@
             flex-direction: column;
             align-items: center;
         }
-        h2 { margin-bottom: 5px; }
-        .container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
+        .top-bar {
             width: 100%;
-            max-width: 1200px;
-            margin-top: 20px;
+            max-width: 500px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
         }
-        @media(max-width: 768px) {
-            .container { grid-template-columns: 1fr; }
+        .top-bar select {
+            width: auto;
+            padding: 5px 10px;
+            background: #334155;
+            color: white;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
         }
         .card {
             background: var(--panel);
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .video-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        video {
             width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background: #000;
-            border-radius: 8px;
-            transform: scaleX(-1);
+            max-width: 500px;
+            margin-top: 10px;
         }
-        input, button {
+        .main-container {
+            display: none; /* Hidden until logged in */
+            width: 100%;
+            max-width: 1200px;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media(max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+        input, select, button {
             padding: 10px;
             margin: 5px 0;
             border-radius: 6px;
             border: none;
             font-size: 14px;
+            width: calc(100% - 22px);
+            background: #334155;
+            color: white;
+            font-family: inherit;
         }
-        input { background: #334155; color: white; width: calc(100% - 22px); }
-        button { background: var(--primary); color: white; cursor: pointer; font-weight: bold; width: 100%; }
+        button { background: var(--primary); cursor: pointer; font-weight: bold; width: 100%; }
         button:hover { opacity: 0.9; }
-        .chat-box {
-            height: 220px;
-            background: #0f172a;
-            border-radius: 8px;
-            overflow-y: scroll;
-            padding: 10px;
-            margin-bottom: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .msg { padding: 6px 10px; border-radius: 6px; max-width: 80%; font-size: 13px; word-break: break-word;}
+        .row { display: flex; gap: 10px; }
+        .row select { width: 45%; }
+        .row input { width: 55%; }
+        
+        .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .video-container { position: relative; cursor: pointer; touch-action: none; }
+        .video-container label { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 11px; z-index: 2; }
+        video { width: 100%; height: 180px; object-fit: cover; background: #000; border-radius: 8px; transform: scaleX(-1); }
+        
+        /* Fullscreen & PiP layout states */
+        .video-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999; background: #000; display: flex; align-items: center; justify-content: center; }
+        .video-container.fullscreen video { width: 100%; height: 100%; border-radius: 0; object-fit: contain; }
+        .video-container.pip-floating { position: fixed; bottom: 30px; right: 30px; width: 140px; height: 100px; z-index: 1000; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: #000; overflow: hidden; cursor: grab; }
+        .video-container.pip-floating video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Group Call Video Grid */
+        #groupVideoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
+        .group-video-container { position: relative; background: #000; border-radius: 8px; height: 140px; overflow: hidden; }
+        .group-video-container video { width: 100%; height: 100%; object-fit: cover; transform: none; }
+        .group-video-container label { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 3px; font-size: 10px; z-index: 2; }
+
+        .chat-box { height: 150px; background: #0f172a; border-radius: 8px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .msg { padding: 6px 10px; border-radius: 6px; max-width: 80%; font-size: 13px; word-break: break-word; }
         .msg.sent { background: #4f46e5; align-self: flex-end; }
         .msg.received { background: #334155; align-self: flex-start; }
-        .status { font-size: 12px; color: #38bdf8; margin-bottom: 10px; text-align: center; }
+        .friend-item { display: flex; justify-content: space-between; background: #334155; padding: 8px; border-radius: 6px; margin-top: 5px; align-items: center; }
+        .status { font-size: 13px; color: #38bdf8; text-align: center; margin-bottom: 10px; font-weight: 500; }
     </style>
 </head>
 <body>
 
-    <h2>খালি ঘরে ইউজার নেইম দিয়ে সেটা আপনার বন্ধুকে পাঠান,</h2>
-    <div class="status" id="connection-status">Initializing connection system...</div>
+    <!-- Language Selector Dropdown at top -->
+    <div class="top-bar">
+        <select id="language-select" onchange="changeLanguage(this.value)">
+            <option value="en" selected>English</option>
+            <option value="bn">বাংলা (Bangla)</option>
+        </select>
+    </div>
 
-    <div class="container">
-        <!-- Left Column: Video & Audio Controls -->
-        <div class="card">
-            <h3>Media Stream</h3>
-            <div class="video-grid">
-                <div>
-                    <label>My Video</label>
-                    <video id="localVideo" autoplay muted playsinline></video>
+    <!-- LOGIN & REGISTRATION SCREEN -->
+    <div class="card" id="auth-screen">
+        <h2 data-i18n="auth_title">Welcome to Dino(দীনু) Call System</h2>
+        <p style="font-size: 13px; color: #94a3b8;" data-i18n="auth_desc">Login or register with your Country Code & Phone Number</p>
+        
+        <label data-i18n="label_name">Your Name</label>
+        <input type="text" id="reg-name" placeholder="Enter your name" data-i18n-placeholder="ph_name">
+
+        <label data-i18n="label_id">Country Code & Phone Number ID</label>
+        <div class="row">
+            <select id="reg-country">
+                <option value="+880" selected>Bangladesh (+880)</option>
+                <option value="+1">America (+1)</option>
+                <option value="+966">Saudi Arabia (+966)</option>
+                <option value="+60">Malaysia (+60)</option>
+                <option value="+971">Dubai / UAE (+971)</option>
+                <option value="+960">Maldives (+960)</option>
+            </select>
+            <input type="tel" id="reg-phone" placeholder="Phone number (e.g. 1712345678)" data-i18n-placeholder="ph_phone">
+        </div>
+        <button onclick="loginOrRegister()" style="margin-top: 15px;" data-i18n="btn_login">Login / Register Profile</button>
+    </div>
+
+    <!-- MAIN APP SCREEN (Hidden by default) -->
+    <div class="status" id="connection-status"></div>
+    <div class="main-container" id="app-screen">
+        
+        <!-- Left Column: Single & Group Call Controls -->
+        <div class="card" style="max-width: none;">
+            <h3><span data-i18n="room_title">Live Call Room</span> (<span id="display-my-id"></span>)</h3>
+            
+            <!-- Tabs for 1-on-1 vs Group Call -->
+            <div class="row" style="margin-bottom: 15px;">
+                <button onclick="switchMode('single')" id="btn-single-mode" style="background:#334155;" data-i18n="btn_single_tab">1-on-1 Call</button>
+                <button onclick="switchMode('group')" id="btn-group-mode" style="background:var(--primary);" data-i18n="btn_group_tab">Group Call Room</button>
+            </div>
+
+            <!-- Single Call View -->
+            <div id="single-call-section">
+                <div class="video-grid">
+                    <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
+                        <label data-i18n="lbl_my_video">My Video</label>
+                        <video id="localVideo" autoplay muted playsinline></video>
+                    </div>
+                    <div class="video-container" id="remoteVideoContainer" onclick="toggleFullscreen('remote')">
+                        <label data-i18n="lbl_partner_video">Partner Video</label>
+                        <video id="remoteVideo" autoplay playsinline></video>
+                    </div>
                 </div>
-                <div>
-                    <label>Partner Video</label>
-                    <video id="remoteVideo" autoplay playsinline></video>
+                <input type="text" id="target-id-input" placeholder="Partner's Phone ID (e.g. +8801712345678)" data-i18n-placeholder="ph_partner_id">
+                <div class="row">
+                    <button onclick="startCall(true)" data-i18n="btn_video_call">Video Call</button>
+                    <button onclick="startCall(false)" style="background: #0ea5e9;" data-i18n="btn_audio_call">Audio Call</button>
+                </div>
+                <button onclick="endCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
+            </div>
+
+            <!-- Group Call View -->
+            <div id="group-call-section" style="display: none;">
+                <p style="font-size:12px; color:#94a3b8;" data-i18n="group_desc">Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)</p>
+                
+                <label data-i18n="group_capacity_label">Select Group Max Limit:</label>
+                <select id="group-capacity" style="background:#334155; color:white; padding:8px; border-radius:6px; width:100%; margin-bottom:10px;">
+                    <option value="4" data-i18n="cap_4">Up to 4 People</option>
+                    <option value="6" data-i18n="cap_6">Up to 6 People</option>
+                    <option value="8" data-i18n="cap_8">Up to 8 People</option>
+                    <option value="10" selected data-i18n="cap_10">Up to 10 People</option>
+                </select>
+
+                <!-- Input to add IDs iteratively -->
+                <div class="row">
+                    <input type="text" id="group-member-input" placeholder="Enter ID (+880...)" data-i18n-placeholder="ph_group_input">
+                    <button onclick="addGroupMember()" style="width: 35%; background: #0ea5e9;" data-i18n="btn_add">+ Add</button>
+                </div>
+
+                <!-- Display list of added participants for this group session -->
+                <div style="font-size: 12px; color: #cbd5e1; margin: 8px 0;" data-i18n="group_added_label">Added Members to Call:</div>
+                <div id="group-members-chips" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 30px;">
+                    <!-- Chips appear here -->
+                </div>
+
+                <div id="groupVideoGrid">
+                    <!-- Local stream in group -->
+                    <div class="group-video-container">
+                        <label data-i18n="lbl_me">Me</label>
+                        <video id="groupLocalVideo" autoplay muted playsinline></video>
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top:10px;">
+                    <button onclick="startGroupCall()" data-i18n="btn_start_group">Start & Ring Group</button>
+                    <button onclick="leaveGroupCall()" style="background: #ef4444;" data-i18n="btn_leave_group">Leave Group</button>
                 </div>
             </div>
-            
-            <p>Your ID: <b id="my-id" style="user-select: all;">Setting up...</b></p>
-            <input type="text" id="target-id-input" placeholder="Enter Partner's 8-Digit ID">
-            <button onclick="startCall(true)">Video Call</button>
-            <button onclick="startCall(false)" style="background: #0ea5e9;">Audio-Only Call</button>
-            <button onclick="endCall()" style="background: #ef4444;">End Call</button>
         </div>
 
-        <!-- Right Column: User-to-User Text Chat -->
-        <div class="card">
-            <h3>Direct Chat</h3>
+        <!-- Right Column: Friends & Chat Panel -->
+        <div class="card" style="max-width: none;">
+            <h3 data-i18n="chat_section_title">Friends & Chat</h3>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="add-friend-input" placeholder="Friend's Full Number ID (+880...)" data-i18n-placeholder="ph_friend_input">
+                <button onclick="addFriend()" data-i18n="btn_add_friend">Add Friend</button>
+            </div>
+            
+            <h4 data-i18n="friends_list_title">My Friends List</h4>
+            <div id="friends-list" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
+
+            <h4 data-i18n="direct_chat_title">Direct Chat</h4>
             <div class="chat-box" id="chat-messages"></div>
-            <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Send Message</button>
+            <input type="text" id="chat-input" placeholder="Type message..." data-i18n-placeholder="ph_chat_input" onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" data-i18n="btn_send">Send</button>
         </div>
     </div>
 
 <script>
-    let peer;
-    let myStream;
-    let currentCall;
-    let dataConnection;
-    let ringInterval = null;
-    let audioCtx = null;
-
-    // Prompt user for an 8-digit ID on startup
-    function getCustomId() {
-        let customId = "";
-        while (true) {
-            customId = prompt("Enter your custom 8-digit ID/Username:", Math.floor(10000000 + Math.random() * 90000000));
-            if (customId === null) {
-                // User clicked cancel, generate random 8-digit fallback
-                customId = Math.floor(10000000 + Math.random() * 90000000).toString();
-                break;
-            }
-            customId = customId.trim();
-            if (/^\d{8}$/.test(customId)) {
-                break; // Valid 8-digit number
-            }
-            alert("Invalid format! Please enter exactly an 8-digit number (e.g., 12345678).");
+    // --- DICTIONARY FOR TRANSLATIONS ---
+    const translations = {
+        en: {
+            auth_title: "Welcome to Dino Call System",
+            auth_desc: "Login or register with your Country Code & Phone Number",
+            label_name: "Your Name",
+            ph_name: "Enter your name",
+            label_id: "Country Code & Phone Number ID",
+            ph_phone: "Phone number (e.g. 1712345678)",
+            btn_login: "Login / Register Profile",
+            
+            room_title: "Live Call Room",
+            btn_single_tab: "1-on-1 Call",
+            btn_group_tab: "Group Call Room",
+            lbl_my_video: "My Video",
+            lbl_partner_video: "Partner Video",
+            ph_partner_id: "Partner's Phone ID (e.g. +8801712345678)",
+            btn_video_call: "Video Call",
+            btn_audio_call: "Audio Call",
+            btn_end_call: "End Call",
+            
+            group_desc: "Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)",
+            group_capacity_label: "Select Group Max Limit:",
+            cap_4: "Up to 4 People",
+            cap_6: "Up to 6 People",
+            cap_8: "Up to 8 People",
+            cap_10: "Up to 10 People",
+            ph_group_input: "Enter ID (+880...)",
+            btn_add: "+ Add",
+            group_added_label: "Added Members to Call:",
+            lbl_me: "Me",
+            btn_start_group: "Start & Ring Group",
+            btn_leave_group: "Leave Group",
+            
+            chat_section_title: "Friends & Chat",
+            ph_friend_input: "Friend's Full Number ID (+880...)",
+            btn_add_friend: "Add Friend",
+            friends_list_title: "My Friends List",
+            direct_chat_title: "Direct Chat",
+            ph_chat_input: "Type message...",
+            btn_send: "Send",
+            
+            // Alerts & status messages
+            err_name_phone: "Please enter your name and phone number.",
+            net_ready: "Connected to network database & ready!",
+            err_online: "This number ID is already active online on another device.",
+            incoming_call: "Incoming call! Accept?",
+            err_target: "Select or enter a target phone number!",
+            calling: "Calling partner...",
+            connected_call: "Connected in live call.",
+            call_ended: "Call ended.",
+            err_group_input: "Enter a valid phone number ID to add.",
+            err_self_id: "You cannot add your own ID to the group list.",
+            err_already_added: "This ID is already added to the group list.",
+            err_capacity: (max) => `Group has reached maximum capacity of ${max} people.`,
+            no_members_added: "No members added yet.",
+            err_min_member: "Please add at least one member ID to start a group call!",
+            ringing_group: "Ringing group participants...",
+            group_active: "Group call active.",
+            left_group: "Left group call.",
+            err_friend_id: "Enter a valid friend's phone number.",
+            err_friend_not_found: "This user phone number is not found in database!",
+            err_friend_exists: "Already in your friends list!",
+            friend_success: "Friend added successfully!",
+            no_friends: "No friends added yet.",
+            btn_call: "Call"
+        },
+        bn: {
+            auth_title: "Dino(দীনু) কল সিস্টেমে স্বাগতম",
+            auth_desc: "আপনার কান্ট্রি কোড ও ফোন নম্বর দিয়ে লগইন বা রেজিস্টার করুন",
+            label_name: "আপনার নাম",
+            ph_name: "আপনার নাম লিখুন",
+            label_id: "দেশ এবং ফোন নম্বর আইডি",
+            ph_phone: "ফোন নম্বর (যেমন: 1712345678)",
+            btn_login: "লগইন / প্রফাইল তৈরি করুন",
+            
+            room_title: "লাইভ কল রুম",
+            btn_single_tab: "১-অন-১ কল",
+            btn_group_tab: "গ্রুপ কল রুম",
+            lbl_my_video: "আমার ভিডিও",
+            lbl_partner_video: "সঙ্গীর ভিডিও",
+            ph_partner_id: "সঙ্গীর ফোন আইডি (যেমন: +8801712345678)",
+            btn_video_call: "ভিডিও কল",
+            btn_audio_call: "অডিও কল",
+            btn_end_call: "কল শেষ করুন",
+            
+            group_desc: "গ্রুপ কল করার জন্য একে একে অংশগ্রহণকারীদের আইডি যোগ করুন (সর্বোচ্চ ৪, ৬, ৮, ১০ জন)",
+            group_capacity_label: "গ্রুপ ধারণক্ষমতা নির্বাচন করুন:",
+            cap_4: "সর্বোচ্চ ৪ জন",
+            cap_6: "সর্বোচ্চ ৬ জন",
+            cap_8: "সর্বোচ্চ ৮ জন",
+            cap_10: "সর্বোচ্চ ১০ জন",
+            ph_group_input: "আইডি লিখুন (+880...)",
+            btn_add: "+ যোগ করুন",
+            group_added_label: "কলের জন্য যোগ করা সদস্যগণ:",
+            lbl_me: "আমি",
+            btn_start_group: "গ্রুপ কল শুরু ও রিং করুন",
+            btn_leave_group: "গ্রুপ ত্যাগ করুন",
+            
+            chat_section_title: "বন্ধু এবং চ্যাট",
+            ph_friend_input: "বন্ধুর সম্পূর্ণ ফোন আইডি (+880...)",
+            btn_add_friend: "বন্ধু যোগ করুন",
+            friends_list_title: "আমার বন্ধুর তালিকা",
+            direct_chat_title: "সরাসরি চ্যাট",
+            ph_chat_input: "এখানে বার্তা লিখুন...",
+            btn_send: "পাঠান",
+            
+            // Alerts & status messages
+            err_name_phone: "দয়া করে আপনার নাম এবং ফোন নম্বর লিখুন।",
+            net_ready: "নেটওয়ার্ক ডাটাবেসের সাথে সংযুক্ত এবং প্রস্তুত!",
+            err_online: "এই ফোন নম্বর আইডিটি ইতিমধ্যে অন্য কোনো ডিভাইসে চালু রয়েছে।",
+            incoming_call: "ইনকামিং কল এসেছে! গ্রহণ করতে চান?",
+            err_target: "দয়া করে সঙ্গীর ফোন নম্বর লিখুন!",
+            calling: "কল করা হচ্ছে...",
+            connected_call: "লাইভ কলে সংযুক্ত আছেন।",
+            call_ended: "কল শেষ হয়েছে।",
+            err_group_input: "যোগ করার জন্য একটি সঠিক ফোন নম্বর আইডি লিখুন।",
+            err_self_id: "আপনি নিজের আইডি গ্রুপে যোগ করতে পারবেন না।",
+            err_already_added: "এই আইডিটি ইতিমধ্যে গ্রুপ তালিকায় যোগ করা হয়েছে।",
+            err_capacity: (max) => `গ্রুপে সর্বোচ্চ ${max} জনের সীমা পূর্ণ হয়েছে।`,
+            no_members_added: "এখনো কোনো সদস্য যোগ করা হয়নি।",
+            err_min_member: "গ্রুপ কল শুরু করতে কমপক্ষে একজন সদস্যের আইডি যোগ করুন!",
+            ringing_group: "গ্রুপ সদস্যদের কল করা হচ্ছে...",
+            group_active: "গ্রুপ কল সক্রিয় আছে।",
+            left_group: "গ্রুপ কল ত্যাগ করা হয়েছে।",
+            err_friend_id: "দয়া করে সঠিক বন্ধুর ফোন নম্বর দিন।",
+            err_friend_not_found: "এই ফোন নম্বরটি ডাটাবেজে পাওয়া যায়নি!",
+            err_friend_exists: "এই বন্ধুটি ইতিমধ্যে আপনার তালিকায় আছে!",
+            friend_success: "বন্ধু সফলভাবে যোগ করা হয়েছে!",
+            no_friends: "এখনো কোনো বন্ধু যোগ করা হয়নি।",
+            btn_call: "কল"
         }
-        return customId;
+    };
+
+    let currentLang = 'en';
+
+    function changeLanguage(lang) {
+        currentLang = lang;
+        
+        // Update all elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (translations[currentLang][key]) {
+                el.innerText = translations[currentLang][key];
+            }
+        });
+
+        // Update all placeholder attributes with data-i18n-placeholder attribute
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (translations[currentLang][key]) {
+                el.setAttribute('placeholder', translations[currentLang][key]);
+            }
+        });
+
+        // Re-render chips or friends lists to adapt language strings immediately
+        renderGroupChips();
+        loadFriendsUI();
     }
 
+    // TODO: Replace this configuration with your own free Firebase project keys
+    const firebaseConfig = {
+    apiKey: "AIzaSyAODsM04fG95nIniGu1uhXzNukEnNL_OMM",
+    authDomain: "rwein-store.firebaseapp.com",
+    databaseURL: "https://rwein-store-default-rtdb.firebaseio.com",
+    projectId: "rwein-store",
+    storageBucket: "rwein-store.firebasestorage.app",
+    messagingSenderId: "1047274378784",
+    appId: "1:1047274378784:web:1c62876508ee439016ce45",
+    measurementId: "G-9MNQYQSB0J"
+    
+ };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let peer, myStream, currentCall, dataConnection;
+    let ringInterval = null, audioCtx = null;
+    
+    // Group call variables
+    let groupMembersList = [];
+    let groupCalls = [];
+
+    // --- RINGTONE SYSTEM ---
     function startRingingTone() {
         if (ringInterval) return;
         try {
@@ -153,16 +426,16 @@
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
+                osc.frequency.setValueAtTime(480, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 1.5);
+                osc.stop(audioCtx.currentTime + 1.2);
             }
             playBeep();
-            ringInterval = setInterval(playBeep, 3000);
+            ringInterval = setInterval(playBeep, 2500);
         } catch (e) {
             console.log("Audio context error:", e);
         }
@@ -179,136 +452,361 @@
         }
     }
 
-    function initPeer() {
-        // Get custom 8-digit ID right away
-        const customId = getCustomId();
+    // --- LOGIN / DATABASE PROFILE HANDLER ---
+    async function loginOrRegister() {
+        const name = document.getElementById('reg-name').value.trim();
+        const country = document.getElementById('reg-country').value;
+        let phone = document.getElementById('reg-phone').value.trim();
 
-        // Pass custom ID into PeerJS connection
-        peer = new Peer(customId);
+        if (!name || !phone) {
+            return alert(translations[currentLang].err_name_phone);
+        }
 
-        peer.on('open', (id) => {
-            document.getElementById('my-id').innerText = id;
-            document.getElementById('connection-status').innerText = 'Connected! Share your 8-digit ID to receive calls.';
+        phone = phone.replace(/[\s-]/g, '');
+        const cleanCountry = country.startsWith('+') ? country : '+' + country;
+        const cleanPhone = phone.startsWith('+') ? phone.slice(1) : phone;
+        const fullUserId = cleanCountry + cleanPhone;
+
+        const userDocRef = db.collection('users').doc(fullUserId);
+        const doc = await userDocRef.get();
+
+        if (doc.exists) {
+            currentUser = doc.data();
+        } else {
+            currentUser = { 
+                userId: fullUserId, 
+                countryCode: cleanCountry, 
+                phone: cleanPhone, 
+                name: name, 
+                friends: [] 
+            };
+            await userDocRef.set(currentUser);
+        }
+
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'grid';
+        document.getElementById('display-my-id').innerText = currentUser.userId;
+
+        initPeerSystem(currentUser.userId);
+        loadFriendsUI();
+    }
+
+    function initPeerSystem(userId) {
+        const peerId = userId.replace('+', 'plus_');
+        peer = new Peer(peerId);
+
+        peer.on('open', () => {
+            document.getElementById('connection-status').innerText = translations[currentLang].net_ready;
         });
 
         peer.on('error', (err) => {
             if (err.type === 'unavailable-id') {
-                alert("That 8-digit ID is already taken by someone else online. Please refresh and choose another.");
-            } else {
-                console.error(err);
+                alert(translations[currentLang].err_online);
             }
         });
 
         peer.on('call', async (call) => {
-            const acceptCall = confirm("Incoming call! Do you want to accept?");
-            if (!acceptCall) return;
-            
-            try {
+            startRingingTone();
+            if (confirm(translations[currentLang].incoming_call)) {
+                stopRingingTone();
                 myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('localVideo').srcObject = myStream;
-                
                 call.answer(myStream);
                 currentCall = call;
-
-                call.on('stream', (remoteStream) => {
-                    const remoteVideo = document.getElementById('remoteVideo');
-                    remoteVideo.srcObject = remoteStream;
-                    remoteVideo.play().catch(e => console.log("Playback error:", e));
-                    document.getElementById('connection-status').innerText = 'Connected in a live call.';
+                call.on('stream', (stream) => {
+                    document.getElementById('remoteVideo').srcObject = stream;
+                    document.getElementById('remoteVideo').play().catch(()=>{});
                 });
-
                 call.on('close', () => endCall());
-            } catch (err) {
-                alert("Could not access camera/mic for answering.");
-                console.error(err);
+            } else {
+                stopRingingTone();
+                call.close();
             }
         });
 
         peer.on('connection', (conn) => {
             dataConnection = conn;
-            setupDataConnectionHandlers();
-            document.getElementById('connection-status').innerText = 'Data chat channel linked!';
+            setupChatHandlers();
         });
     }
 
+    // --- UI MODE SWITCHING ---
+    function switchMode(mode) {
+        if (mode === 'single') {
+            document.getElementById('single-call-section').style.display = 'block';
+            document.getElementById('group-call-section').style.display = 'none';
+            document.getElementById('btn-single-mode').style.background = 'var(--primary)';
+            document.getElementById('btn-group-mode').style.background = '#334155';
+        } else {
+            document.getElementById('single-call-section').style.display = 'none';
+            document.getElementById('group-call-section').style.display = 'block';
+            document.getElementById('btn-group-mode').style.background = 'var(--primary)';
+            document.getElementById('btn-single-mode').style.background = '#334155';
+        }
+    }
+
+    // --- 1-ON-1 CALL FUNCTIONS ---
     async function startCall(isVideo) {
-        const targetId = document.getElementById('target-id-input').value.trim();
-        if (!targetId) return alert("Please enter your partner's 8-digit ID first!");
+        let targetId = document.getElementById('target-id-input').value.trim();
+        if (!targetId) return alert(translations[currentLang].err_target);
+
+        if (!targetId.startsWith('+')) targetId = '+' + targetId;
+        const peerTargetId = targetId.replace('+', 'plus_');
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             document.getElementById('localVideo').srcObject = myStream;
 
             startRingingTone();
-            document.getElementById('connection-status').innerText = 'Calling partner...';
+            document.getElementById('connection-status').innerText = translations[currentLang].calling;
 
-            dataConnection = peer.connect(targetId);
-            setupDataConnectionHandlers();
+            dataConnection = peer.connect(peerTargetId);
+            setupChatHandlers();
 
-            const call = peer.call(targetId, myStream);
+            const call = peer.call(peerTargetId, myStream);
             currentCall = call;
 
-            call.on('stream', (remoteStream) => {
+            call.on('stream', (stream) => {
                 stopRingingTone();
-                const remoteVideo = document.getElementById('remoteVideo');
-                remoteVideo.srcObject = remoteStream;
-                remoteVideo.play().catch(e => console.log("Playback error:", e));
-                document.getElementById('connection-status').innerText = 'Connected in a live call.';
+                document.getElementById('remoteVideo').srcObject = stream;
+                document.getElementById('remoteVideo').play().catch(()=>{});
+                document.getElementById('connection-status').innerText = translations[currentLang].connected_call;
             });
 
             call.on('close', () => endCall());
         } catch (err) {
             stopRingingTone();
-            alert("Error accessing camera/microphone. Check permissions.");
-            console.error(err);
+            alert("Camera/Mic access error.");
         }
-    }
-
-    function setupDataConnectionHandlers() {
-        dataConnection.on('data', (data) => {
-            appendMessage(data, 'received');
-        });
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chat-input');
-        const msg = input.value.trim();
-        if (!msg) return;
-
-        if (dataConnection && dataConnection.open) {
-            dataConnection.send(msg);
-            appendMessage(msg, 'sent');
-            input.value = '';
-        } else {
-            alert("Chat connection not active. Connect via call or connection first.");
-        }
-    }
-
-    function handleKeyPress(e) {
-        if (e.key === 'Enter') sendMessage();
-    }
-
-    function appendMessage(text, type) {
-        const chatBox = document.getElementById('chat-messages');
-        const div = document.createElement('div');
-        div.className = `msg ${type}`;
-        div.innerText = text;
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function endCall() {
         stopRingingTone();
         if (currentCall) currentCall.close();
-        if (myStream) {
-            myStream.getTracks().forEach(track => track.stop());
-        }
+        if (myStream) myStream.getTracks().forEach(t => t.stop());
         document.getElementById('localVideo').srcObject = null;
         document.getElementById('remoteVideo').srcObject = null;
-        document.getElementById('connection-status').innerText = 'Call ended.';
+        document.getElementById('connection-status').innerText = translations[currentLang].call_ended;
     }
 
-    initPeer();
+    // --- GROUP CALL ID ADDITION & RINGING ---
+    function addGroupMember() {
+        let memberId = document.getElementById('group-member-input').value.trim();
+        const maxCapacity = parseInt(document.getElementById('group-capacity').value);
+
+        if (!memberId) return alert(translations[currentLang].err_group_input);
+        if (!memberId.startsWith('+')) memberId = '+' + memberId;
+
+        if (memberId === currentUser.userId) {
+            return alert(translations[currentLang].err_self_id);
+        }
+
+        if (groupMembersList.includes(memberId)) {
+            return alert(translations[currentLang].err_already_added);
+        }
+
+        if (groupMembersList.length >= maxCapacity - 1) {
+            return alert(translations[currentLang].err_capacity(maxCapacity));
+        }
+
+        groupMembersList.push(memberId);
+        document.getElementById('group-member-input').value = '';
+        renderGroupChips();
+    }
+
+    function renderGroupChips() {
+        const container = document.getElementById('group-members-chips');
+        container.innerHTML = '';
+        if (groupMembersList.length === 0) {
+            container.innerHTML = `<span style="font-size:11px; color:#94a3b8;">${translations[currentLang].no_members_added}</span>`;
+            return;
+        }
+
+        groupMembersList.forEach((id, index) => {
+            const chip = document.createElement('div');
+            chip.style.background = '#475569';
+            chip.style.padding = '3px 8px';
+            chip.style.borderRadius = '12px';
+            chip.style.fontSize = '12px';
+            chip.style.display = 'flex';
+            chip.style.alignItems = 'center';
+            chip.style.gap = '5px';
+            chip.innerHTML = `${id} <span style="cursor:pointer; color:#f87171; font-weight:bold;" onclick="removeGroupMember(${index})">&times;</span>`;
+            container.appendChild(chip);
+        });
+    }
+
+    function removeGroupMember(index) {
+        groupMembersList.splice(index, 1);
+        renderGroupChips();
+    }
+
+    async function startGroupCall() {
+        if (groupMembersList.length === 0) {
+            return alert(translations[currentLang].err_min_member);
+        }
+
+        try {
+            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('groupLocalVideo').srcObject = myStream;
+
+            startRingingTone();
+            document.getElementById('connection-status').innerText = translations[currentLang].ringing_group;
+
+            groupMembersList.forEach(memberId => {
+                const peerTargetId = memberId.replace('+', 'plus_');
+                const call = peer.call(peerTargetId, myStream);
+                groupCalls.push(call);
+
+                call.on('stream', (remoteStream) => {
+                    stopRingingTone();
+                    appendGroupVideo(memberId, remoteStream);
+                    document.getElementById('connection-status').innerText = translations[currentLang].group_active;
+                });
+
+                call.on('close', () => {
+                    removeGroupVideoUI(memberId);
+                });
+            });
+
+        } catch (e) {
+            stopRingingTone();
+            alert("Error accessing camera/mic for group call.");
+            console.error(e);
+        }
+    }
+
+    function appendGroupVideo(memberId, stream) {
+        const grid = document.getElementById('groupVideoGrid');
+        const existingId = 'group-vid-' + memberId.replace(/[^a-zA-Z0-9]/g, '_');
+        if (document.getElementById(existingId)) return;
+
+        const div = document.createElement('div');
+        div.className = 'group-video-container';
+        div.id = existingId;
+        div.innerHTML = `
+            <label>${memberId}</label>
+            <video autoplay playsinline></video>
+        `;
+        div.querySelector('video').srcObject = stream;
+        div.querySelector('video').play().catch(()=>{});
+        grid.appendChild(div);
+    }
+
+    function removeGroupVideoUI(memberId) {
+        const existingId = 'group-vid-' + memberId.replace(/[^a-zA-Z0-9]/g, '_');
+        const el = document.getElementById(existingId);
+        if (el) el.remove();
+    }
+
+    function leaveGroupCall() {
+        stopRingingTone();
+        groupCalls.forEach(c => c.close());
+        groupCalls = [];
+        groupMembersList = [];
+        renderGroupChips();
+
+        if (myStream) myStream.getTracks().forEach(t => t.stop());
+        document.getElementById('groupVideoGrid').innerHTML = `
+            <div class="group-video-container">
+                <label data-i18n="lbl_me">${translations[currentLang].lbl_me}</label>
+                <video id="groupLocalVideo" autoplay muted playsinline></video>
+            </div>
+        `;
+        document.getElementById('connection-status').innerText = translations[currentLang].left_group;
+    }
+
+    // --- FRIEND & CHAT DATABASE HANDLERS ---
+    async function addFriend() {
+        let friendId = document.getElementById('add-friend-input').value.trim();
+        if (!friendId || friendId === currentUser.userId) return alert(translations[currentLang].err_friend_id);
+
+        if (!friendId.startsWith('+')) friendId = '+' + friendId;
+
+        const friendDoc = await db.collection('users').doc(friendId).get();
+        if (!friendDoc.exists) {
+            return alert(translations[currentLang].err_friend_not_found);
+        }
+
+        if (currentUser.friends.includes(friendId)) {
+            return alert(translations[currentLang].err_friend_exists);
+        }
+
+        currentUser.friends.push(friendId);
+        await db.collection('users').doc(currentUser.userId).update({
+            friends: currentUser.friends
+        });
+
+        document.getElementById('add-friend-input').value = '';
+        loadFriendsUI();
+        alert(translations[currentLang].friend_success);
+    }
+
+    async function loadFriendsUI() {
+        const listDiv = document.getElementById('friends-list');
+        listDiv.innerHTML = '';
+
+        if (currentUser.friends.length === 0) {
+            listDiv.innerHTML = `<p style="font-size:12px; color:#94a3b8;">${translations[currentLang].no_friends}</p>`;
+            return;
+        }
+
+        for (let fId of currentUser.friends) {
+            const fDoc = await db.collection('users').doc(fId).get();
+            if (fDoc.exists) {
+                const fData = fDoc.data();
+                const div = document.createElement('div');
+                div.className = 'friend-item';
+                div.innerHTML = `
+                    <span><b>${fData.name}</b> (${fData.userId})</span>
+                    <button style="width:auto; padding:4px 8px; font-size:11px;" onclick="callFriend('${fData.userId}')">${translations[currentLang].btn_call}</button>
+                `;
+                listDiv.appendChild(div);
+            }
+        }
+    }
+
+    function callFriend(friendId) {
+        document.getElementById('target-id-input').value = friendId;
+        switchMode('single');
+        startCall(true);
+    }
+
+    function setupChatHandlers() {
+        dataConnection.on('data', (data) => appendMsg(data, 'received'));
+    }
+
+    function sendMessage() {
+        const text = document.getElementById('chat-input').value.trim();
+        if (!text || !dataConnection) return;
+        dataConnection.send(text);
+        appendMsg(text, 'sent');
+        document.getElementById('chat-input').value = '';
+    }
+
+    function appendMsg(text, type) {
+        const box = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function toggleFullscreen(type) {
+        const local = document.getElementById('localVideoContainer');
+        const remote = document.getElementById('remoteVideoContainer');
+        local.classList.remove('fullscreen', 'pip-floating');
+        remote.classList.remove('fullscreen', 'pip-floating');
+
+        if (type === 'remote') {
+            remote.classList.add('fullscreen');
+            local.classList.add('pip-floating');
+        } else if (type === 'local') {
+            local.classList.add('fullscreen');
+            remote.classList.add('pip-floating');
+        }
+    }
 </script>
 </body>
 </html>
