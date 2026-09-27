@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Call & Chat System</title>
+    <title>Dino Video Streaming</title>
     <!-- PeerJS for Calling -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <!-- Firebase SDKs -->
@@ -50,7 +50,7 @@
         }
         .top-bar button.logout-btn {
             background: #ef4444;
-            display: none; /* Hidden on login screen */
+            display: none;
         }
         .card {
             background: var(--panel);
@@ -62,7 +62,7 @@
             margin-top: 10px;
         }
         .main-container {
-            display: none; /* Hidden until logged in */
+            display: none;
             width: 100%;
             max-width: 1200px;
             grid-template-columns: 2fr 1fr;
@@ -90,17 +90,19 @@
         .row input { width: 55%; }
         
         .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .video-container { position: relative; cursor: pointer; touch-action: none; }
+        .video-container { position: relative; cursor: pointer; touch-action: none; background: #000; border-radius: 8px; overflow: hidden; height: 180px; }
         .video-container label { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 11px; z-index: 2; }
-        video { width: 100%; height: 180px; object-fit: cover; background: #000; border-radius: 8px; transform: scaleX(-1); }
+        video { width: 100%; height: 100%; object-fit: cover; background: #000; transform: scaleX(-1); }
         
-        /* Fullscreen & PiP layout states */
         .video-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999; background: #000; display: flex; align-items: center; justify-content: center; }
         .video-container.fullscreen video { width: 100%; height: 100%; border-radius: 0; object-fit: contain; }
-        .video-container.pip-floating { position: fixed; bottom: 30px; right: 30px; width: 140px; height: 100px; z-index: 1000; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: #000; overflow: hidden; cursor: grab; }
+        
+        .close-fs-btn { display: none; position: absolute; top: 15px; right: 15px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 1000; align-items: center; justify-content: center; }
+        .video-container.fullscreen .close-fs-btn { display: flex; }
+
+        .video-container.pip-floating { position: fixed; bottom: 30px; right: 30px; width: 140px; height: 100px; z-index: 1000; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: #000; }
         .video-container.pip-floating video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Group Call Video Grid */
         #groupVideoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
         .group-video-container { position: relative; background: #000; border-radius: 8px; height: 140px; overflow: hidden; }
         .group-video-container video { width: 100%; height: 100%; object-fit: cover; transform: none; }
@@ -116,7 +118,6 @@
 </head>
 <body>
 
-    <!-- Language Selector & Logout Controls at top -->
     <div class="top-bar">
         <button id="logout-btn" class="logout-btn" onclick="logoutUser()" data-i18n="btn_logout_action">Logout</button>
         <select id="language-select" onchange="changeLanguage(this.value)">
@@ -125,7 +126,6 @@
         </select>
     </div>
 
-    <!-- LOGIN & REGISTRATION SCREEN -->
     <div class="card" id="auth-screen">
         <h2 data-i18n="auth_title">Welcome to Dino Call System</h2>
         <p style="font-size: 13px; color: #94a3b8;" data-i18n="auth_desc">Login or register with your Country Code & Phone Number</p>
@@ -148,28 +148,26 @@
         <button onclick="loginOrRegister()" style="margin-top: 15px;" data-i18n="btn_login">Login / Register Profile</button>
     </div>
 
-    <!-- MAIN APP SCREEN (Hidden by default) -->
     <div class="status" id="connection-status"></div>
     <div class="main-container" id="app-screen">
         
-        <!-- Left Column: Single & Group Call Controls -->
         <div class="card" style="max-width: none;">
             <h3><span data-i18n="room_title">Live Call Room</span> (<span id="display-my-id"></span>)</h3>
             
-            <!-- Tabs for 1-on-1 vs Group Call -->
             <div class="row" style="margin-bottom: 15px;">
                 <button onclick="switchMode('single')" id="btn-single-mode" style="background:#334155;" data-i18n="btn_single_tab">1-on-1 Call</button>
                 <button onclick="switchMode('group')" id="btn-group-mode" style="background:var(--primary);" data-i18n="btn_group_tab">Group Call Room</button>
             </div>
 
-            <!-- Single Call View -->
             <div id="single-call-section">
                 <div class="video-grid">
                     <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
+                        <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_my_video">My Video</label>
                         <video id="localVideo" autoplay muted playsinline></video>
                     </div>
                     <div class="video-container" id="remoteVideoContainer" onclick="toggleFullscreen('remote')">
+                        <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_partner_video">Partner Video</label>
                         <video id="remoteVideo" autoplay playsinline></video>
                     </div>
@@ -182,7 +180,6 @@
                 <button onclick="endCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
             </div>
 
-            <!-- Group Call View -->
             <div id="group-call-section" style="display: none;">
                 <p style="font-size:12px; color:#94a3b8;" data-i18n="group_desc">Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)</p>
                 
@@ -194,21 +191,16 @@
                     <option value="10" selected data-i18n="cap_10">Up to 10 People</option>
                 </select>
 
-                <!-- Input to add IDs iteratively -->
                 <div class="row">
                     <input type="text" id="group-member-input" placeholder="Enter ID (+966...)" data-i18n-placeholder="ph_group_input">
                     <button onclick="addGroupMember()" style="width: 35%; background: #0ea5e9;" data-i18n="btn_add">+ Add</button>
                 </div>
 
-                <!-- Display list of added participants for this group session -->
                 <div style="font-size: 12px; color: #cbd5e1; margin: 8px 0;" data-i18n="group_added_label">Added Members to Call:</div>
-                <div id="group-members-chips" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 30px;">
-                    <!-- Chips appear here -->
-                </div>
+                <div id="group-members-chips" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 30px;"></div>
 
                 <div id="groupVideoGrid">
-                    <!-- Local stream in group -->
-                    <div class="group-video-container">
+                    <div class="group-video-container" id="localGroupVideoContainer">
                         <label data-i18n="lbl_me">Me</label>
                         <video id="groupLocalVideo" autoplay muted playsinline></video>
                     </div>
@@ -221,7 +213,6 @@
             </div>
         </div>
 
-        <!-- Right Column: Friends & Chat Panel -->
         <div class="card" style="max-width: none;">
             <h3 data-i18n="chat_section_title">Friends & Chat</h3>
             <div style="margin-bottom: 15px;">
@@ -240,7 +231,6 @@
     </div>
 
 <script>
-    // --- DICTIONARY FOR TRANSLATIONS ---
     const translations = {
         en: {
             auth_title: "Welcome to Dino Call System",
@@ -251,7 +241,6 @@
             ph_phone: "Phone number (e.g. 530725809)",
             btn_login: "Login / Register Profile",
             btn_logout_action: "Logout",
-            
             room_title: "Live Call Room",
             btn_single_tab: "1-on-1 Call",
             btn_group_tab: "Group Call Room",
@@ -261,7 +250,6 @@
             btn_video_call: "Video Call",
             btn_audio_call: "Audio Call",
             btn_end_call: "End Call",
-            
             group_desc: "Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)",
             group_capacity_label: "Select Group Max Limit:",
             cap_4: "Up to 4 People",
@@ -274,7 +262,6 @@
             lbl_me: "Me",
             btn_start_group: "Start & Ring Group",
             btn_leave_group: "Leave Group",
-            
             chat_section_title: "Friends & Chat",
             ph_friend_input: "Friend's Full Number ID (+966...)",
             btn_add_friend: "Add Friend",
@@ -282,8 +269,6 @@
             direct_chat_title: "Direct Chat",
             ph_chat_input: "Type message...",
             btn_send: "Send",
-            
-            // Alerts & status messages
             err_name_phone: "Please enter your name and phone number.",
             net_ready: "Connected to network database & ready!",
             err_online: "This number ID is already active online on another device.",
@@ -317,7 +302,6 @@
             ph_phone: "ফোন নম্বর (যেমন: 530725809)",
             btn_login: "লগইন / প্রফাইল তৈরি করুন",
             btn_logout_action: "লগআউট",
-            
             room_title: "লাইভ কল রুম",
             btn_single_tab: "১-অন-১ কল",
             btn_group_tab: "গ্রুপ কল রুম",
@@ -327,7 +311,6 @@
             btn_video_call: "ভিডিও কল",
             btn_audio_call: "অডিও কল",
             btn_end_call: "কল শেষ করুন",
-            
             group_desc: "গ্রুপ কল করার জন্য একে একে অংশগ্রহণকারীদের আইডি যোগ করুন (সর্বোচ্চ ৪, ৬, ৮, ১০ জন)",
             group_capacity_label: "গ্রুপ ধারণক্ষমতা নির্বাচন করুন:",
             cap_4: "সর্বোচ্চ ৪ জন",
@@ -340,7 +323,6 @@
             lbl_me: "আমি",
             btn_start_group: "গ্রুপ কল শুরু ও রিং করুন",
             btn_leave_group: "গ্রুপ ত্যাগ করুন",
-            
             chat_section_title: "বন্ধু এবং চ্যাট",
             ph_friend_input: "বন্ধুর সম্পূর্ণ ফোন আইডি (+966...)",
             btn_add_friend: "বন্ধু যোগ করুন",
@@ -348,8 +330,6 @@
             direct_chat_title: "সরাসরি চ্যাট",
             ph_chat_input: "এখানে বার্তা লিখুন...",
             btn_send: "পাঠান",
-            
-            // Alerts & status messages
             err_name_phone: "দয়া করে আপনার নাম এবং ফোন নম্বর লিখুন।",
             net_ready: "নেটওয়ার্ক ডাটাবেসের সাথে সংযুক্ত এবং প্রস্তুত!",
             err_online: "এই ফোন নম্বর আইডিটি ইতিমধ্যে অন্য কোনো ডিভাইসে চালু রয়েছে।",
@@ -380,49 +360,43 @@
 
     function changeLanguage(lang) {
         currentLang = lang;
-        
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (translations[currentLang][key]) {
                 el.innerText = translations[currentLang][key];
             }
         });
-
         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.getAttribute('data-i18n-placeholder');
             if (translations[currentLang][key]) {
                 el.setAttribute('placeholder', translations[currentLang][key]);
             }
         });
-
         renderGroupChips();
         loadFriendsUI();
     }
 
-    // TODO: Replace this configuration with your own Firebase project keys
-    
-const firebaseConfig = {
-    apiKey: "AIzaSyAODsM04fG95nIniGu1uhXzNukEnNL_OMM",
-    authDomain: "rwein-store.firebaseapp.com",
-    databaseURL: "https://rwein-store-default-rtdb.firebaseio.com",
-    projectId: "rwein-store",
-    storageBucket: "rwein-store.firebasestorage.app",
-    messagingSenderId: "1047274378784",
-    appId: "1:1047274378784:web:1c62876508ee439016ce45",
-    measurementId: "G-9MNQYQSB0J"
-    
- };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAODsM04fG95nIniGu1uhXzNukEnNL_OMM",
+        authDomain: "rwein-store.firebaseapp.com",
+        databaseURL: "https://rwein-store-default-rtdb.firebaseio.com",
+        projectId: "rwein-store",
+        storageBucket: "rwein-store.firebasestorage.app",
+        messagingSenderId: "1047274378784",
+        appId: "1:1047274378784:web:1c62876508ee439016ce45",
+        measurementId: "G-9MNQYQSB0J"
+    };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const firebaseApp = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(firebaseApp);
 
     let currentUser = null;
-    let peer, myStream, currentCall, dataConnection;
+    let peer, myStream, currentCall;
+    let activeConnections = {}; // Managed per peer target map
     let ringInterval = null, audioCtx = null;
     let groupMembersList = [];
     let groupCalls = [];
 
-    // --- CHECK LOCALSTORAGE ON PAGE LOAD ---
     window.addEventListener('DOMContentLoaded', () => {
         const savedUserJson = localStorage.getItem('p2p_current_user');
         if (savedUserJson) {
@@ -430,13 +404,11 @@ const firebaseConfig = {
                 currentUser = JSON.parse(savedUserJson);
                 startAppSession();
             } catch (e) {
-                console.error("Failed to parse saved session", e);
                 localStorage.removeItem('p2p_current_user');
             }
         }
     });
 
-    // --- RINGTONE SYSTEM ---
     function startRingingTone() {
         if (ringInterval) return;
         try {
@@ -472,15 +444,12 @@ const firebaseConfig = {
         }
     }
 
-    // --- LOGIN / DATABASE PROFILE HANDLER ---
     async function loginOrRegister() {
         const name = document.getElementById('reg-name').value.trim();
         const country = document.getElementById('reg-country').value;
         let phone = document.getElementById('reg-phone').value.trim();
 
-        if (!name || !phone) {
-            return alert(translations[currentLang].err_name_phone);
-        }
+        if (!name || !phone) return alert(translations[currentLang].err_name_phone);
 
         phone = phone.replace(/[\s-]/g, '');
         const cleanCountry = country.startsWith('+') ? country : '+' + country;
@@ -493,17 +462,10 @@ const firebaseConfig = {
         if (doc.exists) {
             currentUser = doc.data();
         } else {
-            currentUser = { 
-                userId: fullUserId, 
-                countryCode: cleanCountry, 
-                phone: cleanPhone, 
-                name: name, 
-                friends: [] 
-            };
+            currentUser = { userId: fullUserId, countryCode: cleanCountry, phone: cleanPhone, name: name, friends: [] };
             await userDocRef.set(currentUser);
         }
 
-        // Save session locally
         localStorage.setItem('p2p_current_user', JSON.stringify(currentUser));
         startAppSession();
     }
@@ -519,7 +481,6 @@ const firebaseConfig = {
     }
 
     function logoutUser() {
-        // Clear local storage and reset session data
         localStorage.removeItem('p2p_current_user');
         if (peer) peer.destroy();
         endCall();
@@ -532,8 +493,16 @@ const firebaseConfig = {
     }
 
     function initPeerSystem(userId) {
-        const peerId = userId.replace('+', 'plus_');
-        peer = new Peer(peerId);
+        const peerId = 'user_' + userId.replace(/[^0-9]/g, '');
+
+        peer = new Peer(peerId, {
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
 
         peer.on('open', () => {
             document.getElementById('connection-status').innerText = translations[currentLang].net_ready;
@@ -545,32 +514,36 @@ const firebaseConfig = {
             }
         });
 
+        peer.on('connection', (conn) => {
+            activeConnections[conn.peer] = conn;
+            setupChatHandlers(conn);
+        });
+
         peer.on('call', async (call) => {
             startRingingTone();
             if (confirm(translations[currentLang].incoming_call)) {
                 stopRingingTone();
-                myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('localVideo').srcObject = myStream;
-                call.answer(myStream);
-                currentCall = call;
-                call.on('stream', (stream) => {
-                    document.getElementById('remoteVideo').srcObject = stream;
-                    document.getElementById('remoteVideo').play().catch(()=>{});
-                });
-                call.on('close', () => endCall());
+                try {
+                    myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    document.getElementById('localVideo').srcObject = myStream;
+                    call.answer(myStream);
+                    currentCall = call;
+                    
+                    call.on('stream', (stream) => {
+                        document.getElementById('remoteVideo').srcObject = stream;
+                        document.getElementById('remoteVideo').play().catch(()=>{});
+                    });
+                    call.on('close', () => endCall());
+                } catch (err) {
+                    alert("Camera/Mic access required.");
+                }
             } else {
                 stopRingingTone();
                 call.close();
             }
         });
-
-        peer.on('connection', (conn) => {
-            dataConnection = conn;
-            setupChatHandlers();
-        });
     }
 
-    // --- UI MODE SWITCHING ---
     function switchMode(mode) {
         if (mode === 'single') {
             document.getElementById('single-call-section').style.display = 'block';
@@ -585,13 +558,11 @@ const firebaseConfig = {
         }
     }
 
-    // --- 1-ON-1 CALL FUNCTIONS ---
     async function startCall(isVideo) {
         let targetId = document.getElementById('target-id-input').value.trim();
         if (!targetId) return alert(translations[currentLang].err_target);
 
-        if (!targetId.startsWith('+')) targetId = '+' + targetId;
-        const peerTargetId = targetId.replace('+', 'plus_');
+        const cleanTargetPeerId = 'user_' + targetId.replace(/[^0-9]/g, '');
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
@@ -600,10 +571,11 @@ const firebaseConfig = {
             startRingingTone();
             document.getElementById('connection-status').innerText = translations[currentLang].calling;
 
-            dataConnection = peer.connect(peerTargetId);
-            setupChatHandlers();
+            let conn = peer.connect(cleanTargetPeerId);
+            activeConnections[cleanTargetPeerId] = conn;
+            setupChatHandlers(conn);
 
-            const call = peer.call(peerTargetId, myStream);
+            const call = peer.call(cleanTargetPeerId, myStream);
             currentCall = call;
 
             call.on('stream', (stream) => {
@@ -627,9 +599,9 @@ const firebaseConfig = {
         document.getElementById('localVideo').srcObject = null;
         document.getElementById('remoteVideo').srcObject = null;
         document.getElementById('connection-status').innerText = translations[currentLang].call_ended;
+        resetVideoLayout();
     }
 
-    // --- GROUP CALL ID ADDITION & RINGING ---
     function addGroupMember() {
         let memberId = document.getElementById('group-member-input').value.trim();
         const maxCapacity = parseInt(document.getElementById('group-capacity').value);
@@ -637,17 +609,9 @@ const firebaseConfig = {
         if (!memberId) return alert(translations[currentLang].err_group_input);
         if (!memberId.startsWith('+')) memberId = '+' + memberId;
 
-        if (memberId === currentUser.userId) {
-            return alert(translations[currentLang].err_self_id);
-        }
-
-        if (groupMembersList.includes(memberId)) {
-            return alert(translations[currentLang].err_already_added);
-        }
-
-        if (groupMembersList.length >= maxCapacity - 1) {
-            return alert(translations[currentLang].err_capacity(maxCapacity));
-        }
+        if (memberId === currentUser.userId) return alert(translations[currentLang].err_self_id);
+        if (groupMembersList.includes(memberId)) return alert(translations[currentLang].err_already_added);
+        if (groupMembersList.length >= maxCapacity - 1) return alert(translations[currentLang].err_capacity(maxCapacity));
 
         groupMembersList.push(memberId);
         document.getElementById('group-member-input').value = '';
@@ -661,7 +625,6 @@ const firebaseConfig = {
             container.innerHTML = `<span style="font-size:11px; color:#94a3b8;">${translations[currentLang].no_members_added}</span>`;
             return;
         }
-
         groupMembersList.forEach((id, index) => {
             const chip = document.createElement('div');
             chip.style.background = '#475569';
@@ -682,9 +645,7 @@ const firebaseConfig = {
     }
 
     async function startGroupCall() {
-        if (groupMembersList.length === 0) {
-            return alert(translations[currentLang].err_min_member);
-        }
+        if (groupMembersList.length === 0) return alert(translations[currentLang].err_min_member);
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -694,7 +655,7 @@ const firebaseConfig = {
             document.getElementById('connection-status').innerText = translations[currentLang].ringing_group;
 
             groupMembersList.forEach(memberId => {
-                const peerTargetId = memberId.replace('+', 'plus_');
+                const peerTargetId = 'user_' + memberId.replace(/[^0-9]/g, '');
                 const call = peer.call(peerTargetId, myStream);
                 groupCalls.push(call);
 
@@ -704,15 +665,11 @@ const firebaseConfig = {
                     document.getElementById('connection-status').innerText = translations[currentLang].group_active;
                 });
 
-                call.on('close', () => {
-                    removeGroupVideoUI(memberId);
-                });
+                call.on('close', () => removeGroupVideoUI(memberId));
             });
-
         } catch (e) {
             stopRingingTone();
             alert("Error accessing camera/mic for group call.");
-            console.error(e);
         }
     }
 
@@ -724,10 +681,7 @@ const firebaseConfig = {
         const div = document.createElement('div');
         div.className = 'group-video-container';
         div.id = existingId;
-        div.innerHTML = `
-            <label>${memberId}</label>
-            <video autoplay playsinline></video>
-        `;
+        div.innerHTML = `<label>${memberId}</label><video autoplay playsinline></video>`;
         div.querySelector('video').srcObject = stream;
         div.querySelector('video').play().catch(()=>{});
         grid.appendChild(div);
@@ -747,37 +701,32 @@ const firebaseConfig = {
         renderGroupChips();
 
         if (myStream) myStream.getTracks().forEach(t => t.stop());
-        document.getElementById('groupVideoGrid').innerHTML = `
-            <div class="group-video-container">
-                <label data-i18n="lbl_me">${translations[currentLang].lbl_me}</label>
-                <video id="groupLocalVideo" autoplay muted playsinline></video>
-            </div>
-        `;
+
+        // Safely remove only remote participant containers, keeping the local video intact
+        const grid = document.getElementById('groupVideoGrid');
+        const containers = grid.querySelectorAll('.group-video-container');
+        containers.forEach(el => {
+            if (el.id !== 'localGroupVideoContainer') {
+                el.remove();
+            }
+        });
+        const localVid = document.getElementById('groupLocalVideo');
+        if (localVid) localVid.srcObject = null;
+
         document.getElementById('connection-status').innerText = translations[currentLang].left_group;
     }
 
-    // --- FRIEND & CHAT DATABASE HANDLERS ---
     async function addFriend() {
         let friendId = document.getElementById('add-friend-input').value.trim();
         if (!friendId || friendId === currentUser.userId) return alert(translations[currentLang].err_friend_id);
-
         if (!friendId.startsWith('+')) friendId = '+' + friendId;
 
         const friendDoc = await db.collection('users').doc(friendId).get();
-        if (!friendDoc.exists) {
-            return alert(translations[currentLang].err_friend_not_found);
-        }
-
-        if (currentUser.friends.includes(friendId)) {
-            return alert(translations[currentLang].err_friend_exists);
-        }
+        if (!friendDoc.exists) return alert(translations[currentLang].err_friend_not_found);
+        if (currentUser.friends.includes(friendId)) return alert(translations[currentLang].err_friend_exists);
 
         currentUser.friends.push(friendId);
-        await db.collection('users').doc(currentUser.userId).update({
-            friends: currentUser.friends
-        });
-
-        // Update local session storage as well
+        await db.collection('users').doc(currentUser.userId).update({ friends: currentUser.friends });
         localStorage.setItem('p2p_current_user', JSON.stringify(currentUser));
 
         document.getElementById('add-friend-input').value = '';
@@ -815,16 +764,35 @@ const firebaseConfig = {
         startCall(true);
     }
 
-    function setupChatHandlers() {
-        dataConnection.on('data', (data) => appendMsg(data, 'received'));
+    function setupChatHandlers(conn) {
+        if (!conn) return;
+        conn.on('data', (data) => appendMsg(data, 'received'));
     }
 
     function sendMessage() {
         const text = document.getElementById('chat-input').value.trim();
-        if (!text || !dataConnection) return;
-        dataConnection.send(text);
-        appendMsg(text, 'sent');
-        document.getElementById('chat-input').value = '';
+        if (!text) return;
+
+        let targetId = document.getElementById('target-id-input').value.trim();
+        if (!targetId) return alert("Enter target ID first.");
+        const cleanTargetPeerId = 'user_' + targetId.replace(/[^0-9]/g, '');
+
+        let conn = activeConnections[cleanTargetPeerId];
+
+        if (!conn || conn.open === false) {
+            conn = peer.connect(cleanTargetPeerId);
+            activeConnections[cleanTargetPeerId] = conn;
+            conn.on('open', () => {
+                conn.send(text);
+                appendMsg(text, 'sent');
+                document.getElementById('chat-input').value = '';
+            });
+            setupChatHandlers(conn);
+        } else {
+            conn.send(text);
+            appendMsg(text, 'sent');
+            document.getElementById('chat-input').value = '';
+        }
     }
 
     function appendMsg(text, type) {
@@ -849,6 +817,13 @@ const firebaseConfig = {
             local.classList.add('fullscreen');
             remote.classList.add('pip-floating');
         }
+    }
+
+    function resetVideoLayout() {
+        const local = document.getElementById('localVideoContainer');
+        const remote = document.getElementById('remoteVideoContainer');
+        local.classList.remove('fullscreen', 'pip-floating');
+        remote.classList.remove('fullscreen', 'pip-floating');
     }
 </script>
 </body>
