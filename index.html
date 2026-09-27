@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dino Video Streaming</title>
+    <title>P2P Call & Chat System</title>
     <!-- PeerJS for Calling -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <!-- Firebase SDKs -->
@@ -127,7 +127,7 @@
     </div>
 
     <div class="card" id="auth-screen">
-        <h2 data-i18n="auth_title">Welcome to Dino Call System</h2>
+        <h2 data-i18n="auth_title">Welcome to P2P Call System</h2>
         <p style="font-size: 13px; color: #94a3b8;" data-i18n="auth_desc">Login or register with your Country Code & Phone Number</p>
         
         <label data-i18n="label_name">Your Name</label>
@@ -233,7 +233,7 @@
 <script>
     const translations = {
         en: {
-            auth_title: "Welcome to Dino Call System",
+            auth_title: "Welcome to P2P Call System",
             auth_desc: "Login or register with your Country Code & Phone Number",
             label_name: "Your Name",
             ph_name: "Enter your name",
@@ -294,7 +294,7 @@
             btn_call: "Call"
         },
         bn: {
-            auth_title: "Dino(দীনু) কল সিস্টেমে স্বাগতম",
+            auth_title: "P2P কল সিস্টেমে স্বাগতম",
             auth_desc: "আপনার কান্ট্রি কোড ও ফোন নম্বর দিয়ে লগইন বা রেজিস্টার করুন",
             label_name: "আপনার নাম",
             ph_name: "আপনার নাম লিখুন",
@@ -392,7 +392,7 @@
 
     let currentUser = null;
     let peer, myStream, currentCall;
-    let activeConnections = {}; // Managed per peer target map
+    let activeConnections = {}; 
     let ringInterval = null, audioCtx = null;
     let groupMembersList = [];
     let groupCalls = [];
@@ -702,7 +702,6 @@
 
         if (myStream) myStream.getTracks().forEach(t => t.stop());
 
-        // Safely remove only remote participant containers, keeping the local video intact
         const grid = document.getElementById('groupVideoGrid');
         const containers = grid.querySelectorAll('.group-video-container');
         containers.forEach(el => {
