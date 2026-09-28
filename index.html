@@ -266,6 +266,60 @@
 </head>
 <body>
 
+    <!-- Outgoing / Active Call Fullscreen Overlay -->
+    <div class="modal-overlay" id="call-overlay" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);">
+        <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding: 50px 20px; box-sizing:border-box; position:relative;">
+            
+            <!-- Top Info -->
+            <div style="display:flex; flex-direction:column; align-items:center; margin-top: 40px;">
+                <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); margin-bottom: 20px; background: var(--primary); display:flex; align-items:center; justify-content:center; font-size: 36px; font-weight:bold; color:white;" id="call-avatar-box">
+                    <span id="call-peer-initial">U</span>
+                </div>
+                <h2 id="call-peer-name" style="margin: 0 0 8px 0; font-size: 24px; font-weight: 500; color: white;">Caller Name</h2>
+                <p id="call-status-text" style="margin: 0; font-size: 15px; color: #cbd5e1;">Ringing...</p>
+            </div>
+
+            <!-- Bottom Action Buttons -->
+            <div style="display:flex; justify-content:space-around; width:100%; max-width:320px; margin-bottom: 30px; align-items:center;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <button onclick="toggleMic()" id="mic-toggle-btn" style="width:60px; height:60px; border-radius:50%; background:#334155; border:none; color:white; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0;">🎤</button>
+                    <span style="font-size:11px; color:#cbd5e1;" id="lbl-mic">Mic On</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <button onclick="hangUpCall()" style="width:70px; height:70px; border-radius:50%; background:#ef4444; border:none; color:white; font-size:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0;">📞</button>
+                    <span style="font-size:11px; color:#cbd5e1;" id="lbl-hangup">Hang Up</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Fullscreen Overlay -->
+    <div class="modal-overlay" id="incoming-overlay" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);">
+        <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding: 50px 20px; box-sizing:border-box; position:relative;">
+            
+            <!-- Top Info -->
+            <div style="display:flex; flex-direction:column; align-items:center; margin-top: 40px;">
+                <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.5); margin-bottom: 20px; background: var(--primary); display:flex; align-items:center; justify-content:center; font-size: 36px; font-weight:bold; color:white;" id="incoming-avatar-box">
+                    <span id="incoming-peer-initial">U</span>
+                </div>
+                <h2 id="incoming-peer-name" style="margin: 0 0 8px 0; font-size: 24px; font-weight: 500; color: white;">Caller Name</h2>
+                <p style="margin: 0; font-size: 15px; color: #cbd5e1;">Incoming audio call</p>
+            </div>
+
+            <!-- Bottom Accept / Reject Buttons -->
+            <div style="display:flex; justify-content:space-around; width:100%; max-width:280px; margin-bottom: 30px; align-items:center;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <button onclick="rejectIncomingCall()" style="width:70px; height:70px; border-radius:50%; background:#ef4444; border:none; color:white; font-size:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0;">✕</button>
+                    <span style="font-size:11px; color:#cbd5e1;">Decline</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <button onclick="acceptIncomingCall()" style="width:70px; height:70px; border-radius:50%; background:#22c55e; border:none; color:white; font-size:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0;">✓</button>
+                    <span style="font-size:11px; color:#cbd5e1;">Accept</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Bar with Profile Icon and Controls -->
     <div class="top-bar">
         <div class="top-bar-left">
@@ -330,7 +384,7 @@
             </div>
 
             <div id="single-call-section">
-                <div class="video-grid">
+                <div class="video-grid" style="display:none;">
                     <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
                         <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_my_video">My Video</label>
@@ -347,7 +401,7 @@
                     <button onclick="startCall(true)" data-i18n="btn_video_call">Video Call</button>
                     <button onclick="startCall(false)" style="background: #0ea5e9;" data-i18n="btn_audio_call">Audio Call</button>
                 </div>
-                <button onclick="endCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
+                <button onclick="hangUpCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
             </div>
 
             <div id="group-call-section" style="display: none;">
@@ -642,6 +696,7 @@
     let groupCalls = [];
     let viewingStoriesList = [];
     let currentStoryIndex = 0;
+    let pendingIncomingCall = null;
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUserJson = localStorage.getItem('p2p_current_user');
@@ -734,7 +789,7 @@
     function logoutUser() {
         localStorage.removeItem('p2p_current_user');
         if (peer) peer.destroy();
-        endCall();
+        hangUpCall();
 
         currentUser = null;
         document.getElementById('app-screen').style.display = 'none';
@@ -821,10 +876,8 @@
 
         if (!currentUser) return;
 
-        // Filter out stories older than 24 hours (24 * 60 * 60 * 1000 ms)
         const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
         
-        // Process User's own stories
         if (currentUser.stories && currentUser.stories.length > 0) {
             currentUser.stories = currentUser.stories.filter(s => s.timestamp > twentyFourHoursAgo);
             await db.collection('users').doc(currentUser.userId).update({ stories: currentUser.stories });
@@ -835,7 +888,6 @@
             }
         }
 
-        // Process Friends stories
         if (currentUser.friends && currentUser.friends.length > 0) {
             for (let fId of currentUser.friends) {
                 const fDoc = await db.collection('users').doc(fId).get();
@@ -948,28 +1000,16 @@
             setupChatHandlers(conn);
         });
 
+        // Incoming Call Event Listener for Fullscreen Overlay
         peer.on('call', async (call) => {
+            pendingIncomingCall = call;
             startRingingTone();
-            if (confirm(translations[currentLang].incoming_call)) {
-                stopRingingTone();
-                try {
-                    myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    document.getElementById('localVideo').srcObject = myStream;
-                    call.answer(myStream);
-                    currentCall = call;
-                    
-                    call.on('stream', (stream) => {
-                        document.getElementById('remoteVideo').srcObject = stream;
-                        document.getElementById('remoteVideo').play().catch(()=>{});
-                    });
-                    call.on('close', () => endCall());
-                } catch (err) {
-                    alert("Camera/Mic access required.");
-                }
-            } else {
-                stopRingingTone();
-                call.close();
-            }
+
+            const callerDisplay = call.peer.replace('user_', '+');
+            document.getElementById('incoming-peer-name').innerText = callerDisplay;
+            document.getElementById('incoming-peer-initial').innerText = callerDisplay.charAt(callerDisplay.length - 1);
+            
+            document.getElementById('incoming-overlay').style.display = 'flex';
         });
     }
 
@@ -993,12 +1033,16 @@
 
         const cleanTargetPeerId = 'user_' + targetId.replace(/[^0-9]/g, '');
 
+        document.getElementById('call-peer-name').innerText = targetId;
+        document.getElementById('call-peer-initial').innerText = targetId.charAt(targetId.length - 1);
+        document.getElementById('call-status-text').innerText = "Ringing...";
+        document.getElementById('call-overlay').style.display = 'flex';
+
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             document.getElementById('localVideo').srcObject = myStream;
 
             startRingingTone();
-            document.getElementById('connection-status').innerText = translations[currentLang].calling;
 
             let conn = peer.connect(cleanTargetPeerId);
             activeConnections[cleanTargetPeerId] = conn;
@@ -1011,24 +1055,86 @@
                 stopRingingTone();
                 document.getElementById('remoteVideo').srcObject = stream;
                 document.getElementById('remoteVideo').play().catch(()=>{});
-                document.getElementById('connection-status').innerText = translations[currentLang].connected_call;
+                document.getElementById('call-status-text').innerText = translations[currentLang].connected_call;
             });
 
-            call.on('close', () => endCall());
+            call.on('close', () => hangUpCall());
         } catch (err) {
             stopRingingTone();
+            document.getElementById('call-overlay').style.display = 'none';
             alert("Camera/Mic access error.");
         }
     }
 
-    function endCall() {
+    async function acceptIncomingCall() {
         stopRingingTone();
-        if (currentCall) currentCall.close();
-        if (myStream) myStream.getTracks().forEach(t => t.stop());
+        document.getElementById('incoming-overlay').style.display = 'none';
+
+        document.getElementById('call-peer-name').innerText = pendingIncomingCall.peer.replace('user_', '+');
+        document.getElementById('call-peer-initial').innerText = pendingIncomingCall.peer.replace('user_', '+').charAt(pendingIncomingCall.peer.replace('user_', '+').length - 1);
+        document.getElementById('call-status-text').innerText = translations[currentLang].connected_call;
+        document.getElementById('call-overlay').style.display = 'flex';
+
+        try {
+            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = myStream;
+            pendingIncomingCall.answer(myStream);
+            currentCall = pendingIncomingCall;
+            
+            pendingIncomingCall.on('stream', (stream) => {
+                document.getElementById('remoteVideo').srcObject = stream;
+                document.getElementById('remoteVideo').play().catch(()=>{});
+            });
+            pendingIncomingCall.on('close', () => hangUpCall());
+        } catch (err) {
+            alert("Camera/Mic access required.");
+            hangUpCall();
+        }
+    }
+
+    function rejectIncomingCall() {
+        stopRingingTone();
+        if (pendingIncomingCall) {
+            pendingIncomingCall.close();
+            pendingIncomingCall = null;
+        }
+        document.getElementById('incoming-overlay').style.display = 'none';
+    }
+
+    function hangUpCall() {
+        stopRingingTone();
+        if (currentCall) {
+            currentCall.close();
+            currentCall = null;
+        }
+        if (pendingIncomingCall) {
+            pendingIncomingCall.close();
+            pendingIncomingCall = null;
+        }
+        if (myStream) {
+            myStream.getTracks().forEach(t => t.stop());
+        }
+        
         document.getElementById('localVideo').srcObject = null;
         document.getElementById('remoteVideo').srcObject = null;
+        document.getElementById('call-overlay').style.display = 'none';
+        document.getElementById('incoming-overlay').style.display = 'none';
         document.getElementById('connection-status').innerText = translations[currentLang].call_ended;
         resetVideoLayout();
+    }
+
+    function endCall() {
+        hangUpCall();
+    }
+
+    function toggleMic() {
+        if (!myStream) return;
+        const audioTrack = myStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            document.getElementById('mic-toggle-btn').style.background = audioTrack.enabled ? '#334155' : '#ef4444';
+            document.getElementById('lbl-mic').innerText = audioTrack.enabled ? "Mic On" : "Muted";
+        }
     }
 
     function addGroupMember() {
@@ -1220,7 +1326,7 @@
         } else {
             conn.send(text);
             appendMsg(text, 'sent');
-            document.getElementById('chat-input').value = '';
+            document.getElementById('chat-input'].value = '';
         }
     }
 
