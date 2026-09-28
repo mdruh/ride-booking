@@ -384,7 +384,7 @@
             </div>
 
             <div id="single-call-section">
-                <div class="video-grid" style="display:none;">
+                <div class="video-grid" id="single-video-grid" style="display:none;">
                     <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
                         <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_my_video">My Video</label>
@@ -1000,7 +1000,6 @@
             setupChatHandlers(conn);
         });
 
-        // Incoming Call Event Listener for Fullscreen Overlay
         peer.on('call', async (call) => {
             pendingIncomingCall = call;
             startRingingTone();
@@ -1037,6 +1036,7 @@
         document.getElementById('call-peer-initial').innerText = targetId.charAt(targetId.length - 1);
         document.getElementById('call-status-text').innerText = "Ringing...";
         document.getElementById('call-overlay').style.display = 'flex';
+        document.getElementById('single-video-grid').style.display = 'grid';
 
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
@@ -1062,6 +1062,7 @@
         } catch (err) {
             stopRingingTone();
             document.getElementById('call-overlay').style.display = 'none';
+            document.getElementById('single-video-grid').style.display = 'none';
             alert("Camera/Mic access error.");
         }
     }
@@ -1069,6 +1070,7 @@
     async function acceptIncomingCall() {
         stopRingingTone();
         document.getElementById('incoming-overlay').style.display = 'none';
+        document.getElementById('single-video-grid').style.display = 'grid';
 
         document.getElementById('call-peer-name').innerText = pendingIncomingCall.peer.replace('user_', '+');
         document.getElementById('call-peer-initial').innerText = pendingIncomingCall.peer.replace('user_', '+').charAt(pendingIncomingCall.peer.replace('user_', '+').length - 1);
@@ -1117,6 +1119,7 @@
         
         document.getElementById('localVideo').srcObject = null;
         document.getElementById('remoteVideo').srcObject = null;
+        document.getElementById('single-video-grid').style.display = 'none';
         document.getElementById('call-overlay').style.display = 'none';
         document.getElementById('incoming-overlay').style.display = 'none';
         document.getElementById('connection-status').innerText = translations[currentLang].call_ended;
@@ -1326,7 +1329,7 @@
         } else {
             conn.send(text);
             appendMsg(text, 'sent');
-            document.getElementById('chat-input'].value = '';
+            document.getElementById('chat-input').value = '';
         }
     }
 
