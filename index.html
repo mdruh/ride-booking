@@ -178,17 +178,42 @@
         .row input { width: 55%; }
         
         .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .video-container { position: relative; cursor: pointer; touch-action: none; background: #000; border-radius: 8px; overflow: hidden; height: 180px; }
+        .video-container { position: relative; cursor: pointer; touch-action: none; background: #000; border-radius: 8px; overflow: hidden; height: 180px; transition: all 0.3s ease; }
         .video-container label { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 11px; z-index: 2; }
         video { width: 100%; height: 100%; object-fit: cover; background: #000; transform: scaleX(-1); }
         
-        .video-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999; background: #000; display: flex; align-items: center; justify-content: center; }
-        .video-container.fullscreen video { width: 100%; height: 100%; border-radius: 0; object-fit: contain; }
+        /* Fullscreen Main Video with Partner Stay on Top */
+        .video-container.fullscreen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            z-index: 999; 
+            background: #000; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 0;
+        }
+        .video-container.fullscreen video { width: 100%; height: 100%; object-fit: contain; }
         
         .close-fs-btn { display: none; position: absolute; top: 15px; right: 15px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 1000; align-items: center; justify-content: center; }
         .video-container.fullscreen .close-fs-btn { display: flex; }
 
-        .video-container.pip-floating { position: fixed; bottom: 30px; right: 30px; width: 140px; height: 100px; z-index: 1000; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: #000; }
+        /* Floating Top/Bottom Card for the non-expanded video */
+        .video-container.pip-floating { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            width: 130px; 
+            height: 90px; 
+            z-index: 1000; 
+            border-radius: 8px; 
+            border: 2px solid rgba(255,255,255,0.4); 
+            background: #000; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
         .video-container.pip-floating video { width: 100%; height: 100%; object-fit: cover; }
 
         #groupVideoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
@@ -384,7 +409,7 @@
             </div>
 
             <div id="single-call-section">
-                <div class="video-grid" id="single-video-grid" style="display:none;">
+                <div class="video-grid" id="single-video-grid">
                     <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
                         <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_my_video">My Video</label>
@@ -1342,18 +1367,22 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    /* Updated Toggle Fullscreen Logic: 
+       - If you click your video ("local"), it expands to full screen, and partner's video stays on top (pip-floating).
+       - If you click partner's video ("remote"), it expands to full screen, and your video stays on top.
+    */
     function toggleFullscreen(type) {
         const local = document.getElementById('localVideoContainer');
         const remote = document.getElementById('remoteVideoContainer');
         local.classList.remove('fullscreen', 'pip-floating');
         remote.classList.remove('fullscreen', 'pip-floating');
 
-        if (type === 'remote') {
-            remote.classList.add('fullscreen');
-            local.classList.add('pip-floating');
-        } else if (type === 'local') {
+        if (type === 'local') {
             local.classList.add('fullscreen');
-            remote.classList.add('pip-floating');
+            remote.classList.add('pip-floating'); // Partner stays visible as a floating box on top
+        } else if (type === 'remote') {
+            remote.classList.add('fullscreen');
+            local.classList.add('pip-floating'); // Your video stays visible as a floating box on top
         }
     }
 
