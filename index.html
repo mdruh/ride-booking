@@ -178,48 +178,18 @@
         .row input { width: 55%; }
         
         .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .video-container { position: relative; cursor: pointer; touch-action: none; background: #000; border-radius: 8px; overflow: hidden; height: 180px; transition: all 0.3s ease; }
+        .video-container { position: relative; cursor: pointer; touch-action: none; background: #000; border-radius: 8px; overflow: hidden; height: 180px; }
         .video-container label { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 11px; z-index: 2; }
         video { width: 100%; height: 100%; object-fit: cover; background: #000; transform: scaleX(-1); }
         
-        /* Fullscreen Main Video with Partner Stay on Top */
-        .video-container.fullscreen { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100vw; 
-            height: 100vh; 
-            z-index: 999; 
-            background: #000; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 0;
-        }
-        .video-container.fullscreen video { width: 100%; height: 100%; object-fit: contain; }
+        .video-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999; background: #000; display: flex; align-items: center; justify-content: center; }
+        .video-container.fullscreen video { width: 100%; height: 100%; border-radius: 0; object-fit: contain; }
         
         .close-fs-btn { display: none; position: absolute; top: 15px; right: 15px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 1000; align-items: center; justify-content: center; }
         .video-container.fullscreen .close-fs-btn { display: flex; }
 
-        /* Floating Top/Bottom Card for the non-expanded video */
-        .video-container.pip-floating { 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            width: 130px; 
-            height: 90px; 
-            z-index: 1000; 
-            border-radius: 8px; 
-            border: 2px solid rgba(255,255,255,0.4); 
-            background: #000; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-        }
+        .video-container.pip-floating { position: fixed; bottom: 30px; right: 30px; width: 140px; height: 100px; z-index: 1000; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: #000; }
         .video-container.pip-floating video { width: 100%; height: 100%; object-fit: cover; }
-
-        #groupVideoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
-        .group-video-container { position: relative; background: #000; border-radius: 8px; height: 140px; overflow: hidden; }
-        .group-video-container video { width: 100%; height: 100%; object-fit: cover; transform: none; }
-        .group-video-container label { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 3px; font-size: 10px; z-index: 2; }
 
         .chat-box { height: 150px; background: #0f172a; border-radius: 8px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
         .msg { padding: 6px 10px; border-radius: 6px; max-width: 80%; font-size: 13px; word-break: break-word; }
@@ -404,12 +374,11 @@
             <h3><span data-i18n="room_title">Live Call Room</span> (<span id="display-my-id"></span>)</h3>
             
             <div class="row" style="margin-bottom: 15px;">
-                <button onclick="switchMode('single')" id="btn-single-mode" style="background:#334155;" data-i18n="btn_single_tab">1-on-1 Call</button>
-                <button onclick="switchMode('group')" id="btn-group-mode" style="background:var(--primary);" data-i18n="btn_group_tab">Group Call Room</button>
+                <button style="background:var(--primary); width: 100%;" data-i18n="btn_single_tab">1-on-1 Call</button>
             </div>
 
             <div id="single-call-section">
-                <div class="video-grid" id="single-video-grid">
+                <div class="video-grid" id="single-video-grid" style="display:none;">
                     <div class="video-container" id="localVideoContainer" onclick="toggleFullscreen('local')">
                         <button class="close-fs-btn" onclick="event.stopPropagation(); resetVideoLayout();">&times;</button>
                         <label data-i18n="lbl_my_video">My Video</label>
@@ -426,39 +395,13 @@
                     <button onclick="startCall(true)" data-i18n="btn_video_call">Video Call</button>
                     <button onclick="startCall(false)" style="background: #0ea5e9;" data-i18n="btn_audio_call">Audio Call</button>
                 </div>
-                <button onclick="hangUpCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
-            </div>
-
-            <div id="group-call-section" style="display: none;">
-                <p style="font-size:12px; color:#94a3b8;" data-i18n="group_desc">Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)</p>
                 
-                <label data-i18n="group_capacity_label">Select Group Max Limit:</label>
-                <select id="group-capacity" style="background:#334155; color:white; padding:8px; border-radius:6px; width:100%; margin-bottom:10px;">
-                    <option value="4" data-i18n="cap_4">Up to 4 People</option>
-                    <option value="6" data-i18n="cap_6">Up to 6 People</option>
-                    <option value="8" data-i18n="cap_8">Up to 8 People</option>
-                    <option value="10" selected data-i18n="cap_10">Up to 10 People</option>
-                </select>
-
-                <div class="row">
-                    <input type="text" id="group-member-input" placeholder="Enter ID (+966...)" data-i18n-placeholder="ph_group_input">
-                    <button onclick="addGroupMember()" style="width: 35%; background: #0ea5e9;" data-i18n="btn_add">+ Add</button>
+                <!-- Group Call Button with Next Update Coming Indicator -->
+                <div style="margin-top: 15px; position: relative;">
+                    <button style="background: #334155; opacity: 0.7; cursor: not-allowed;" disabled data-i18n="btn_group_tab">Group Call (Next Update Coming)</button>
                 </div>
 
-                <div style="font-size: 12px; color: #cbd5e1; margin: 8px 0;" data-i18n="group_added_label">Added Members to Call:</div>
-                <div id="group-members-chips" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 30px;"></div>
-
-                <div id="groupVideoGrid">
-                    <div class="group-video-container" id="localGroupVideoContainer">
-                        <label data-i18n="lbl_me">Me</label>
-                        <video id="groupLocalVideo" autoplay muted playsinline></video>
-                    </div>
-                </div>
-
-                <div class="row" style="margin-top:10px;">
-                    <button onclick="startGroupCall()" data-i18n="btn_start_group">Start & Ring Group</button>
-                    <button onclick="leaveGroupCall()" style="background: #ef4444;" data-i18n="btn_leave_group">Leave Group</button>
-                </div>
+                <button onclick="hangUpCall()" style="background: #ef4444; margin-top: 5px;" data-i18n="btn_end_call">End Call</button>
             </div>
         </div>
 
@@ -545,25 +488,13 @@
             btn_logout_action: "Logout",
             room_title: "Live Call Room",
             btn_single_tab: "1-on-1 Call",
-            btn_group_tab: "Group Call Room",
+            btn_group_tab: "Group Call (Next Update Coming)",
             lbl_my_video: "My Video",
             lbl_partner_video: "Partner Video",
             ph_partner_id: "Partner's Phone ID (e.g. +966530725809)",
             btn_video_call: "Video Call",
             btn_audio_call: "Audio Call",
             btn_end_call: "End Call",
-            group_desc: "Add participant phone ID numbers one by one (Supports 4, 6, 8, 10 people total)",
-            group_capacity_label: "Select Group Max Limit:",
-            cap_4: "Up to 4 People",
-            cap_6: "Up to 6 People",
-            cap_8: "Up to 8 People",
-            cap_10: "Up to 10 People",
-            ph_group_input: "Enter ID (+966...)",
-            btn_add: "+ Add",
-            group_added_label: "Added Members to Call:",
-            lbl_me: "Me",
-            btn_start_group: "Start & Ring Group",
-            btn_leave_group: "Leave Group",
             chat_section_title: "Friends & Chat",
             ph_friend_input: "Friend's Full Number ID (+966...)",
             btn_add_friend: "Add Friend",
@@ -579,15 +510,6 @@
             calling: "Calling partner...",
             connected_call: "Connected in live call.",
             call_ended: "Call ended.",
-            err_group_input: "Enter a valid phone number ID to add.",
-            err_self_id: "You cannot add your own ID to the group list.",
-            err_already_added: "This ID is already added to the group list.",
-            err_capacity: (max) => `Group has reached maximum capacity of ${max} people.`,
-            no_members_added: "No members added yet.",
-            err_min_member: "Please add at least one member ID to start a group call!",
-            ringing_group: "Ringing group participants...",
-            group_active: "Group call active.",
-            left_group: "Left group call.",
             err_friend_id: "Enter a valid friend's phone number.",
             err_friend_not_found: "This user phone number is not found in database!",
             err_friend_exists: "Already in your friends list!",
@@ -616,25 +538,13 @@
             btn_logout_action: "লগআউট",
             room_title: "লাইভ কল রুম",
             btn_single_tab: "১-অন-১ কল",
-            btn_group_tab: "গ্রুপ কল রুম",
+            btn_group_tab: "গ্রুপ কল (পরবর্তী আপডেটে আসছে)",
             lbl_my_video: "আমার ভিডিও",
             lbl_partner_video: "সঙ্গীর ভিডিও",
             ph_partner_id: "সঙ্গীর ফোন আইডি (যেমন: +966530725809)",
             btn_video_call: "ভিডিও কল",
             btn_audio_call: "অডিও কল",
             btn_end_call: "কল শেষ করুন",
-            group_desc: "গ্রুপ কল করার জন্য একে একে অংশগ্রহণকারীদের আইডি যোগ করুন (সর্বোচ্চ ৪, ৬, ৮, ১০ জন)",
-            group_capacity_label: "গ্রুপ ধারণক্ষমতা নির্বাচন করুন:",
-            cap_4: "সর্বোচ্চ ৪ জন",
-            cap_6: "সর্বোচ্চ ৬ জন",
-            cap_8: "সর্বোচ্চ ৮ জন",
-            cap_10: "সর্বোচ্চ ১০ জন",
-            ph_group_input: "আইডি লিখুন (+966...)",
-            btn_add: "+ যোগ করুন",
-            group_added_label: "কলের জন্য যোগ করা সদস্যগণ:",
-            lbl_me: "আমি",
-            btn_start_group: "গ্রুপ কল শুরু ও রিং করুন",
-            btn_leave_group: "গ্রুপ ত্যাগ করুন",
             chat_section_title: "বন্ধু এবং চ্যাট",
             ph_friend_input: "বন্ধুর সম্পূর্ণ ফোন আইডি (+966...)",
             btn_add_friend: "বন্ধু যোগ করুন",
@@ -650,15 +560,6 @@
             calling: "কল করা হচ্ছে...",
             connected_call: "লাইভ কলে সংযুক্ত আছেন।",
             call_ended: "কল শেষ হয়েছে।",
-            err_group_input: "যোগ করার জন্য একটি সঠিক ফোন নম্বর আইডি লিখুন।",
-            err_self_id: "আপনি নিজের আইডি গ্রুপে যোগ করতে পারবেন না।",
-            err_already_added: "এই আইডিটি ইতিমধ্যে গ্রুপ তালিকায় যোগ করা হয়েছে।",
-            err_capacity: (max) => `গ্রুপে সর্বোচ্চ ${max} জনের সীমা পূর্ণ হয়েছে।`,
-            no_members_added: "এখনো কোনো সদস্য যোগ করা হয়নি।",
-            err_min_member: "গ্রুপ কল শুরু করতে কমপক্ষে একজন সদস্যের আইডি যোগ করুন!",
-            ringing_group: "গ্রুপ সদস্যদের কল করা হচ্ছে...",
-            group_active: "গ্রুপ কল সক্রিয় আছে।",
-            left_group: "গ্রুপ কল ত্যাগ করা হয়েছে।",
             err_friend_id: "দয়া করে সঠিক বন্ধুর ফোন নম্বর দিন।",
             err_friend_not_found: "এই ফোন নম্বরটি ডাটাবেজে পাওয়া যায়নি!",
             err_friend_exists: "এই বন্ধুটি ইতিমধ্যে আপনার তালিকায় আছে!",
@@ -694,7 +595,6 @@
                 el.setAttribute('placeholder', translations[currentLang][key]);
             }
         });
-        renderGroupChips();
         loadFriendsUI();
         loadStoriesUI();
     }
@@ -717,8 +617,6 @@
     let peer, myStream, currentCall;
     let activeConnections = {}; 
     let ringInterval = null, audioCtx = null;
-    let groupMembersList = [];
-    let groupCalls = [];
     let viewingStoriesList = [];
     let currentStoryIndex = 0;
     let pendingIncomingCall = null;
@@ -1037,20 +935,6 @@
         });
     }
 
-    function switchMode(mode) {
-        if (mode === 'single') {
-            document.getElementById('single-call-section').style.display = 'block';
-            document.getElementById('group-call-section').style.display = 'none';
-            document.getElementById('btn-single-mode').style.background = 'var(--primary)';
-            document.getElementById('btn-group-mode').style.background = '#334155';
-        } else {
-            document.getElementById('single-call-section').style.display = 'none';
-            document.getElementById('group-call-section').style.display = 'block';
-            document.getElementById('btn-group-mode').style.background = 'var(--primary)';
-            document.getElementById('btn-single-mode').style.background = '#334155';
-        }
-    }
-
     async function startCall(isVideo) {
         let targetId = document.getElementById('target-id-input').value.trim();
         if (!targetId) return alert(translations[currentLang].err_target);
@@ -1064,7 +948,15 @@
         document.getElementById('single-video-grid').style.display = 'grid';
 
         try {
-            myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+            // Robust Media Stream Request with Fallback
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+            } catch (mediaErr) {
+                console.warn("Video stream failed, trying audio-only fallback...", mediaErr);
+                // Fallback to audio if video permissions/devices are restricted in the WebView previewer
+                myStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            }
+
             document.getElementById('localVideo').srcObject = myStream;
 
             startRingingTone();
@@ -1088,7 +980,7 @@
             stopRingingTone();
             document.getElementById('call-overlay').style.display = 'none';
             document.getElementById('single-video-grid').style.display = 'none';
-            alert("Camera/Mic access error.");
+            alert("Camera/Mic access error. Please check app permissions or run via a standard browser.");
         }
     }
 
@@ -1103,7 +995,12 @@
         document.getElementById('call-overlay').style.display = 'flex';
 
         try {
-            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            } catch (e) {
+                myStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            }
+
             document.getElementById('localVideo').srcObject = myStream;
             pendingIncomingCall.answer(myStream);
             currentCall = pendingIncomingCall;
@@ -1151,10 +1048,6 @@
         resetVideoLayout();
     }
 
-    function endCall() {
-        hangUpCall();
-    }
-
     function toggleMic() {
         if (!myStream) return;
         const audioTrack = myStream.getAudioTracks()[0];
@@ -1163,119 +1056,6 @@
             document.getElementById('mic-toggle-btn').style.background = audioTrack.enabled ? '#334155' : '#ef4444';
             document.getElementById('lbl-mic').innerText = audioTrack.enabled ? "Mic On" : "Muted";
         }
-    }
-
-    function addGroupMember() {
-        let memberId = document.getElementById('group-member-input').value.trim();
-        const maxCapacity = parseInt(document.getElementById('group-capacity').value);
-
-        if (!memberId) return alert(translations[currentLang].err_group_input);
-        if (!memberId.startsWith('+')) memberId = '+' + memberId;
-
-        if (memberId === currentUser.userId) return alert(translations[currentLang].err_self_id);
-        if (groupMembersList.includes(memberId)) return alert(translations[currentLang].err_already_added);
-        if (groupMembersList.length >= maxCapacity - 1) return alert(translations[currentLang].err_capacity(maxCapacity));
-
-        groupMembersList.push(memberId);
-        document.getElementById('group-member-input').value = '';
-        renderGroupChips();
-    }
-
-    function renderGroupChips() {
-        const container = document.getElementById('group-members-chips');
-        container.innerHTML = '';
-        if (groupMembersList.length === 0) {
-            container.innerHTML = `<span style="font-size:11px; color:#94a3b8;">${translations[currentLang].no_members_added}</span>`;
-            return;
-        }
-        groupMembersList.forEach((id, index) => {
-            const chip = document.createElement('div');
-            chip.style.background = '#475569';
-            chip.style.padding = '3px 8px';
-            chip.style.borderRadius = '12px';
-            chip.style.fontSize = '12px';
-            chip.style.display = 'flex';
-            chip.style.alignItems = 'center';
-            chip.style.gap = '5px';
-            chip.innerHTML = `${id} <span style="cursor:pointer; color:#f87171; font-weight:bold;" onclick="removeGroupMember(${index})">&times;</span>`;
-            container.appendChild(chip);
-        });
-    }
-
-    function removeGroupMember(index) {
-        groupMembersList.splice(index, 1);
-        renderGroupChips();
-    }
-
-    async function startGroupCall() {
-        if (groupMembersList.length === 0) return alert(translations[currentLang].err_min_member);
-
-        try {
-            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('groupLocalVideo').srcObject = myStream;
-
-            startRingingTone();
-            document.getElementById('connection-status').innerText = translations[currentLang].ringing_group;
-
-            groupMembersList.forEach(memberId => {
-                const peerTargetId = 'user_' + memberId.replace(/[^0-9]/g, '');
-                const call = peer.call(peerTargetId, myStream);
-                groupCalls.push(call);
-
-                call.on('stream', (remoteStream) => {
-                    stopRingingTone();
-                    appendGroupVideo(memberId, remoteStream);
-                    document.getElementById('connection-status').innerText = translations[currentLang].group_active;
-                });
-
-                call.on('close', () => removeGroupVideoUI(memberId));
-            });
-        } catch (e) {
-            stopRingingTone();
-            alert("Error accessing camera/mic for group call.");
-        }
-    }
-
-    function appendGroupVideo(memberId, stream) {
-        const grid = document.getElementById('groupVideoGrid');
-        const existingId = 'group-vid-' + memberId.replace(/[^a-zA-Z0-9]/g, '_');
-        if (document.getElementById(existingId)) return;
-
-        const div = document.createElement('div');
-        div.className = 'group-video-container';
-        div.id = existingId;
-        div.innerHTML = `<label>${memberId}</label><video autoplay playsinline></video>`;
-        div.querySelector('video').srcObject = stream;
-        div.querySelector('video').play().catch(()=>{});
-        grid.appendChild(div);
-    }
-
-    function removeGroupVideoUI(memberId) {
-        const existingId = 'group-vid-' + memberId.replace(/[^a-zA-Z0-9]/g, '_');
-        const el = document.getElementById(existingId);
-        if (el) el.remove();
-    }
-
-    function leaveGroupCall() {
-        stopRingingTone();
-        groupCalls.forEach(c => c.close());
-        groupCalls = [];
-        groupMembersList = [];
-        renderGroupChips();
-
-        if (myStream) myStream.getTracks().forEach(t => t.stop());
-
-        const grid = document.getElementById('groupVideoGrid');
-        const containers = grid.querySelectorAll('.group-video-container');
-        containers.forEach(el => {
-            if (el.id !== 'localGroupVideoContainer') {
-                el.remove();
-            }
-        });
-        const localVid = document.getElementById('groupLocalVideo');
-        if (localVid) localVid.srcObject = null;
-
-        document.getElementById('connection-status').innerText = translations[currentLang].left_group;
     }
 
     async function addFriend() {
@@ -1323,7 +1103,6 @@
 
     function callFriend(friendId) {
         document.getElementById('target-id-input').value = friendId;
-        switchMode('single');
         startCall(true);
     }
 
@@ -1367,22 +1146,18 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    /* Updated Toggle Fullscreen Logic: 
-       - If you click your video ("local"), it expands to full screen, and partner's video stays on top (pip-floating).
-       - If you click partner's video ("remote"), it expands to full screen, and your video stays on top.
-    */
     function toggleFullscreen(type) {
         const local = document.getElementById('localVideoContainer');
         const remote = document.getElementById('remoteVideoContainer');
         local.classList.remove('fullscreen', 'pip-floating');
         remote.classList.remove('fullscreen', 'pip-floating');
 
-        if (type === 'local') {
-            local.classList.add('fullscreen');
-            remote.classList.add('pip-floating'); // Partner stays visible as a floating box on top
-        } else if (type === 'remote') {
+        if (type === 'remote') {
             remote.classList.add('fullscreen');
-            local.classList.add('pip-floating'); // Your video stays visible as a floating box on top
+            local.classList.add('pip-floating');
+        } else if (type === 'local') {
+            local.classList.add('fullscreen');
+            remote.classList.add('pip-floating');
         }
     }
 
